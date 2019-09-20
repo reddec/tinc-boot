@@ -52,6 +52,10 @@ Next new public nodes require increasing number of additional operations (+N ope
 ## Installation
 
 * (recommended) look at releases page and download
+* one line shell command:
+```
+curl -L https://github.com/reddec/tinc-boot/releases/latest/download/tinc-boot_linux_amd64.tar.gz | sudo tar -xz -C /usr/local/bin/ tinc-boot
+```
 * build from source `go get -v github.com/reddec/tinc-boot/cmd/...`
 
 ### Build requirements

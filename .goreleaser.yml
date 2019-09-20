@@ -23,6 +23,7 @@ archives:
 - replacements:
     Linux: linux
     386: i386
+  name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
   format: tar.gz
 checksum:
   name_template: 'checksums.txt'
