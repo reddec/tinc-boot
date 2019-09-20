@@ -1,0 +1,36 @@
+project_name: tinc-boot
+builds:
+- main: ./cmd/tinc-boot/main.go
+  binary: tinc-boot
+  env:
+  - CGO_ENABLED=0
+  goarch:
+    - amd64
+    - 386
+    - arm
+    - arm64
+  goarm:
+    - 5
+    - 6
+    - 7
+  goos:
+    - linux
+  gcflags:
+    - all=-trimpath={{.Env.GOPATH}}
+  flags:
+    - -trimpath
+archives:
+- replacements:
+    Linux: linux
+    386: i386
+  format: tar.gz
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
