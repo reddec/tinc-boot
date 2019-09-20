@@ -24,7 +24,7 @@ const serviceFile = "/etc/systemd/system/tinc-boot"
 
 type Cmd struct {
 	Name    string `long:"name" env:"NAME" description:"Self node name"`
-	Dir     string `long:"dir" env:"DIR" description:"Configuration directory (including net)" default:"."`
+	Dir     string `long:"dir" env:"DIR" description:"Configuration directory (including net)" default:"/etc/tinc/dnet"`
 	Binding string `long:"binding" env:"BINDING" description:"Public binding address" default:":8655"`
 	Token   string `long:"token" env:"TOKEN" description:"Authorization token (used as a encryption key)"`
 	Service bool   `long:"service" env:"SERVICE" description:"Generate service file to /etc/systemd/system/tinc-boot-{net}.service"`
