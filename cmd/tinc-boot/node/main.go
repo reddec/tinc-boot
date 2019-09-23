@@ -28,6 +28,8 @@ type Cmd struct {
 	Binding string `long:"binding" env:"BINDING" description:"Public binding address" default:":8655"`
 	Token   string `long:"token" env:"TOKEN" description:"Authorization token (used as a encryption key)"`
 	Service bool   `long:"service" env:"SERVICE" description:"Generate service file to /etc/systemd/system/tinc-boot-{net}.service"`
+	TLSKey  string `long:"tls-key" env:"TLS_KEY" description:"Path to private TLS key"`
+	TLSCert string `long:"tls-cert" env:"TLS_CERT" description:"Path to public TLS certificate"`
 }
 
 func (cmd *Cmd) Hosts() string              { return filepath.Join(cmd.Dir, "hosts") }
@@ -35,6 +37,7 @@ func (cmd *Cmd) HostFile() string           { return filepath.Join(cmd.Hosts(), 
 func (cmd *Cmd) Network() string            { return filepath.Base(cmd.Dir) }
 func (cmd *Cmd) Bin() (string, error)       { return exec.LookPath(os.Args[0]) }
 func (cmd *Cmd) Directory() (string, error) { return filepath.Abs(cmd.Dir) }
+func (cmd *Cmd) TLS() bool                  { return cmd.TLSKey != "" && cmd.TLSCert != "" }
 
 func (cmd *Cmd) Execute(args []string) error {
 	gin.SetMode(gin.ReleaseMode)
@@ -112,9 +115,13 @@ func (cmd *Cmd) Execute(args []string) error {
 	if cmd.Service {
 		return cmd.installService()
 	}
-
-	log.Println("bootnode on", cmd.Binding)
-	return engine.Run(cmd.Binding)
+	if cmd.TLS() {
+		log.Println("bootnode on", cmd.Binding, "(TLS)")
+		return engine.RunTLS(cmd.Binding, cmd.TLSCert, cmd.TLSKey)
+	} else {
+		log.Println("bootnode on", cmd.Binding)
+		return engine.Run(cmd.Binding)
+	}
 }
 
 func (cmd *Cmd) installService() error {
