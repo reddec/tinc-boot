@@ -13,7 +13,7 @@ import (
 type Cmd struct {
 	Iface  string `long:"iface" env:"INTERFACE" description:"RPC interface" required:"yes"`
 	Port   int    `long:"port" env:"PORT" description:"RPC port" default:"1655"`
-	Subnet string `long:"subnet" env:"SUBNET" description:"Subnet address to watch" required:"yes"`
+	Subnet string `long:"subnet" env:"SUBNET" description:"Subnet address to forget" required:"yes"`
 	Node   string `long:"node" env:"NODE" description:"Subnet owner name" required:"yes"`
 }
 

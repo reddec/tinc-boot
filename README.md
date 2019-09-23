@@ -62,6 +62,11 @@ curl -L https://github.com/reddec/tinc-boot/releases/latest/download/tinc-boot_l
 
 * go 1.13+
 
+## Documentation
+
+* Available by `--help` for all commands
+* Available in [MANUAL.md](MANUAL.md)
+
 ## Runtime requirements
 
 * Linux
