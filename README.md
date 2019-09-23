@@ -100,7 +100,7 @@ Will generate all required files under `/etc/tinc/dnet`.
 ## Turn node to boot node
 
 ```
-sudo tinc-boot bootnode --service --dir /etc/tinc/dnet --token <SECRETTOKEN>
+sudo tinc-boot bootnode --service --token <SECRETTOKEN>
 ```
 
 and follow recommendations
