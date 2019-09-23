@@ -1,4 +1,9 @@
 project_name: tinc-boot
+before:
+  hooks:
+    - rm -rf tinc-boot.1.gz
+    - pandoc MANUAL.md -s -t man -o tinc-boot.1
+    - gzip tinc-boot.1
 builds:
 - main: ./cmd/tinc-boot/main.go
   binary: tinc-boot
@@ -19,11 +24,31 @@ builds:
     - all=-trimpath={{.Env.GOPATH}}
   flags:
     - -trimpath
+nfpms:
+  - name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+    replacements:
+      Linux: linux
+      386: i386
+    homepage: https://github.com/reddec/tinc-boot
+    maintainer: Baryshnikov Aleksandr <owner@reddec.net>
+    description: All-in-one tool with zero dependency to make a process to create a full-mesh Tinc network quick and easy
+    license: Mozilla Public License Version 2.0
+    files:
+      "tinc-boot.1.gz" : "/usr/local/share/man/man1/tinc-boot.1.gz"
+    formats:
+      - deb
+    dependencies:
+      - tinc
 archives:
 - replacements:
     Linux: linux
     386: i386
   name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
+  files:
+    - MANUAL.md
+    - LICENSE
+    - README.md
+    - tinc-boot.1.gz
   format: tar.gz
 checksum:
   name_template: 'checksums.txt'

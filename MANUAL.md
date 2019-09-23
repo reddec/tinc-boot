@@ -1,3 +1,7 @@
+% TINC-BOOT(1)
+% Baryshnikov Aleksandr <owner@reddec.net>
+% September 2019
+
 # Overview
 
 **Tinc-boot** - is a all-in-one tool with zero dependency (except `tinc` of course), that aims to achieve:
