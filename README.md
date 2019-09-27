@@ -128,7 +128,10 @@ and follow recommendations
 
 # How it works
 
-TBD
+* [Обзор (RU)](https://habr.com/ru/post/468213)
+* Overview (EN) - coming soon
+
+![overview](https://user-images.githubusercontent.com/6597086/65752642-ca049d00-e13f-11e9-86ff-05134129eb86.png)
 
 # TODO
 
