@@ -6,9 +6,9 @@ import (
 )
 
 type Node struct {
-	Name    string
-	Subnet  string
-	Fetched bool
+	Name    string `json:"name"`
+	Subnet  string `json:"subnet"`
+	Fetched bool   `json:"fetched"`
 	cancel  func()
 	ctx     context.Context
 }

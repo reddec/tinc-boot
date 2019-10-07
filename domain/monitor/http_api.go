@@ -14,7 +14,7 @@ func (ms *service) createAPI() *gin.Engine {
 	engine.POST("/rpc/watch", ms.apiWatchNode)
 	engine.POST("/rpc/forget", ms.apiForgetNode)
 	engine.POST("/rpc/kill", ms.apiKillNode)
-
+	engine.POST("/rpc/nodes", ms.apiListNodes)
 	return engine
 }
 
@@ -53,4 +53,12 @@ func (ms *service) apiForgetNode(gctx *gin.Context) {
 func (ms *service) apiKillNode(gctx *gin.Context) {
 	ms.Stop()
 	gctx.AbortWithStatus(http.StatusNoContent)
+}
+
+func (ms *service) apiListNodes(gctx *gin.Context) {
+	var reply struct {
+		Nodes []*Node `json:"nodes"`
+	}
+	reply.Nodes = ms.nodes.Copy()
+	gctx.JSON(http.StatusOK, reply)
 }
