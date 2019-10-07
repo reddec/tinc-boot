@@ -200,6 +200,7 @@ func (ms *service) requestNode(node *Node) {
 			log.Println(URL, ":", err)
 		} else {
 			log.Println(URL, "done")
+			node.Fetched = true
 			ms.askForIndex()
 			return
 		}
