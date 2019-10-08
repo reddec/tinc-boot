@@ -48,6 +48,10 @@ Next new public nodes require increasing number of additional operations (+N ope
 2. automatic keys distribution
 3. simplified procedure to add new node to existent net
 
+With simple UI (available on your VPN address with port 1655 by default)
+
+![image](https://user-images.githubusercontent.com/6597086/66371906-3cdf0500-e9d7-11e9-8e11-f6102fbdeb64.png)
+
 
 ## Installation
 

@@ -1,8 +1,10 @@
 package monitor
 
 import (
+	"bytes"
 	"github.com/gin-gonic/gin"
 	"github.com/reddec/tinc-boot/types"
+	"html/template"
 	"net/http"
 	"path/filepath"
 )
@@ -12,6 +14,7 @@ func (ms *service) createAPI() *gin.Engine {
 	engine := gin.Default()
 
 	engine.GET("/", ms.apiServeHostFile)
+	engine.GET("/ui", ms.apiUiNodes)
 	engine.POST("/rpc/watch", ms.apiWatchNode)
 	engine.POST("/rpc/forget", ms.apiForgetNode)
 	engine.POST("/rpc/kill", ms.apiKillNode)
@@ -69,3 +72,30 @@ func (ms *service) apiGetNodeFile(gctx *gin.Context) {
 	node := gctx.Param("node")
 	gctx.File(filepath.Join(ms.cfg.Hosts(), node))
 }
+
+//go:generate go-bindata -o assets.go -pkg monitor --prefix assets/ assets/
+func (ms *service) apiUiNodes(gctx *gin.Context) {
+	nodes := ms.nodes.Copy()
+	ms.renderTemplate(gctx, "nodes.gotemplate", gin.H{
+		"Nodes":   nodes,
+		"Service": ms,
+	})
+}
+
+func (ms *service) renderTemplate(gctx *gin.Context, name string, params interface{}) {
+	ms.initTemplates.Do(func() {
+		for _, assetName := range AssetNames() {
+			templateNodes = make(map[string]*template.Template)
+			templateNodes[assetName] = template.Must(template.New("").Parse(string(MustAsset(assetName))))
+		}
+	})
+	buf := &bytes.Buffer{}
+	err := templateNodes[name].Execute(buf, params)
+	if err != nil {
+		gctx.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	gctx.Data(http.StatusOK, "text/html", buf.Bytes())
+}
+
+var templateNodes map[string]*template.Template

@@ -1,0 +1,96 @@
+<html lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>{{.Service.Config.Name}} - nodes</title>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            align-items: center;
+            display: flex;
+            justify-content: center;
+        }
+        .card {
+            margin: 16px;
+            padding: 5px;
+            min-height: 30px;
+            border-radius: 3px;
+            box-shadow: 0px 1px 3px #777777;
+        }
+        .name {
+            font-size: large;
+            font-weight: bold;
+            padding-top: 3px;
+            padding-bottom: 5px;
+        }
+        .subnet {
+            font-family: monospace;
+        }
+        .status-pending {
+            float: right;
+            padding: 3px;
+            margin-top: -5px;
+            margin-right: -5px;
+            border-radius: 0 3px 0 5px;
+            color: #336699;
+            text-decoration: none;
+        }
+        .hostfile {
+            float: right;
+            padding: 3px;
+            margin-top: -5px;
+            margin-right: -5px;
+            border-radius: 0 3px 0 5px;
+            background-color: #336699;
+            color: white;
+            text-decoration: none;
+        }
+        .container {
+            display: block;
+            vertical-align: middle;
+            width: 800px;
+        }
+        .meta {
+            margin: 16px;
+            color: #84a3e1;
+        }
+
+        .meta-address {
+            font-family: monospace;
+        }
+
+        .meta > a {
+            text-decoration: none;
+            color: #84a3e1;
+            font-weight: bold;
+        }
+
+        .meta > a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="meta">
+        <a href="../" download="{{.Service.Config.Name}}">{{.Service.Config.Name}}</a>, <span class="meta-address">{{.Service.Address}}</span>
+    </div>
+    {{range .Nodes}}
+        {{if .Fetched}}
+            <div class="card">
+                <a href="rpc/node/{{.Name}}/hostfile" class="hostfile" download="{{.Name}}">download</a>
+                <div class="name">{{.Name}}</div>
+                <div class="subnet">{{.Subnet}}</div>
+            </div>
+        {{else}}
+            <div class="card">
+                <div class="status-pending">pending...</div>
+                <div class="name">{{.Name}}</div>
+                <div class="subnet">{{.Subnet}}</div>
+            </div>
+        {{end}}
+    {{end}}
+</div>
+</body>
+</html>

@@ -52,6 +52,7 @@ func (cfg Config) CreateAndRun(ctx context.Context) (*service, error) {
 		cfg:           cfg,
 		globalContext: gctx,
 		reindexEvent:  make(chan struct{}, 1),
+		address:       bind,
 		cancel:        cancel,
 	}
 	listener, err := net.Listen("tcp", bind)
@@ -96,7 +97,9 @@ type service struct {
 	nodes         NodeArray
 	globalContext context.Context
 	pool          sync.WaitGroup
+	initTemplates sync.Once
 	reindexEvent  chan struct{}
+	address       string
 	cancel        func()
 	httpErr       error
 }
@@ -105,6 +108,10 @@ func (ms *service) Stop() {
 	ms.cancel()
 	ms.pool.Wait()
 }
+
+func (ms *service) Config() Config { return ms.cfg }
+
+func (ms *service) Address() string { return ms.address }
 
 func (ms *service) reindexLoop() {
 	reindexTimer := time.NewTicker(ms.cfg.Reindex)
