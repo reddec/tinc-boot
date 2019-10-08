@@ -62,6 +62,7 @@ func (cfg Config) CreateAndRun(ctx context.Context) (*service, error) {
 
 	srv.pool.Add(1)
 	go func() {
+		<-gctx.Done()
 		listener.Close()
 		srv.pool.Done()
 	}()

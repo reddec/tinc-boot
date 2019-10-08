@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/reddec/tinc-boot/types"
 	"net/http"
+	"path/filepath"
 )
 
 func (ms *service) createAPI() *gin.Engine {
@@ -14,7 +15,8 @@ func (ms *service) createAPI() *gin.Engine {
 	engine.POST("/rpc/watch", ms.apiWatchNode)
 	engine.POST("/rpc/forget", ms.apiForgetNode)
 	engine.POST("/rpc/kill", ms.apiKillNode)
-	engine.POST("/rpc/nodes", ms.apiListNodes)
+	engine.GET("/rpc/nodes", ms.apiListNodes)
+	engine.GET("/rpc/node/:node/hostfile", ms.apiGetNodeFile)
 	return engine
 }
 
@@ -61,4 +63,9 @@ func (ms *service) apiListNodes(gctx *gin.Context) {
 	}
 	reply.Nodes = ms.nodes.Copy()
 	gctx.JSON(http.StatusOK, reply)
+}
+
+func (ms *service) apiGetNodeFile(gctx *gin.Context) {
+	node := gctx.Param("node")
+	gctx.File(filepath.Join(ms.cfg.Hosts(), node))
 }
