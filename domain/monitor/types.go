@@ -9,6 +9,7 @@ type Node struct {
 	Name    string `json:"name"`
 	Subnet  string `json:"subnet"`
 	Fetched bool   `json:"fetched"`
+	Public  bool   `json:"public"`
 	cancel  func()
 	ctx     context.Context
 }

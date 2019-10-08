@@ -50,6 +50,10 @@
             vertical-align: middle;
             width: 800px;
         }
+        .public {
+            font-weight: 100 !important;
+            color: #84a3e1;
+        }
         .meta {
             margin: 16px;
             color: #84a3e1;
@@ -80,7 +84,7 @@
         {{if .Fetched}}
             <div class="card">
                 <a href="rpc/node/{{.Name}}/hostfile" class="hostfile" download="{{.Name}}">download</a>
-                <div class="name">{{.Name}}</div>
+                <div class="name">{{.Name}}{{if .Public}}<span class="public"> - public</span>{{end}}</div>
                 <div class="subnet">{{.Subnet}}</div>
             </div>
         {{else}}

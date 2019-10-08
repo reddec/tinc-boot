@@ -132,28 +132,28 @@ func (ms *service) reindexLoop() {
 	}
 }
 
-func (ms *service) tryFetchHost(URL, node string, gctx context.Context) error {
+func (ms *service) tryFetchHost(URL, node string, gctx context.Context) ([]byte, error) {
 	req, err := http.NewRequest(http.MethodGet, URL, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	ctx, cancel := context.WithTimeout(gctx, ms.cfg.Timeout)
 	defer cancel()
 	req = req.WithContext(ctx)
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {
 		log.Println(res.Status)
-		return errors.New("non-200 code")
+		return nil, errors.New("non-200 code")
 	}
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return ioutil.WriteFile(filepath.Join(ms.cfg.Hosts(), node), data, 0755)
+	return data, ioutil.WriteFile(filepath.Join(ms.cfg.Hosts(), node), data, 0755)
 }
 
 func (ms *service) indexConnectTo() error {
@@ -204,11 +204,12 @@ func (ms *service) requestNode(node *Node) {
 	URL := "http://" + strings.Split(node.Subnet, "/")[0] + ":" + strconv.Itoa(ms.cfg.Port)
 	for {
 		log.Println("trying", URL)
-		if err := ms.tryFetchHost(URL, node.Name, node.ctx); err != nil {
+		if data, err := ms.tryFetchHost(URL, node.Name, node.ctx); err != nil {
 			log.Println(URL, ":", err)
 		} else {
 			log.Println(URL, "done")
 			node.Fetched = true
+			node.Public = strings.Contains(string(data), "Address")
 			ms.askForIndex()
 			return
 		}

@@ -50,7 +50,7 @@ Next new public nodes require increasing number of additional operations (+N ope
 
 With simple UI (available on your VPN address with port 1655 by default)
 
-![image](https://user-images.githubusercontent.com/6597086/66371906-3cdf0500-e9d7-11e9-8e11-f6102fbdeb64.png)
+![image](https://user-images.githubusercontent.com/6597086/66372742-5719e280-e9d9-11e9-9942-4577a47e913a.png)
 
 
 ## Installation
