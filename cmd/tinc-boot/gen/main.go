@@ -36,6 +36,7 @@ type Cmd struct {
 	Timeout    time.Duration `long:"timeout" env:"TIMEOUT" description:"Boot node request timeout" default:"15s"`
 	Bin        string        `long:"bin" env:"BIN" description:"tinc-boot location" default:"/usr/local/bin/tinc-boot"`
 	NoBinCopy  bool          `long:"no-bin-copy" env:"NO_BIN_COPY" description:"Disable copy tinc-boot binary"`
+	NoGenKey   bool          `long:"no-gen-key" env:"NO_GEN_KEY" description:"Disable key generation"`
 	Port       int           `long:"port" env:"PORT" description:"Node port (first available will be got if not set)"`
 	Public     []string      `short:"a" alias:"addr" long:"public" env:"PUBLIC" description:"Public addresses that could be used for incoming connections"`
 	Standalone bool          `long:"standalone" env:"STANDALONE" description:"Do not use bootnodes (usefull for very-very first initialization)"`
@@ -224,6 +225,9 @@ func (cmd *Cmd) boot() error {
 }
 
 func (cmd *Cmd) runKeyGen() error {
+	if cmd.NoGenKey {
+		return nil
+	}
 	keyCmd := exec.Command("tincd", "-c", cmd.Dir(), "-K", "4096")
 	keyCmd.Stdin = bytes.NewBufferString("\n\n")
 	keyCmd.Stdout = os.Stdout
