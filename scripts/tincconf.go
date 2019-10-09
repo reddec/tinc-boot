@@ -10,12 +10,16 @@ Name = {{.Name}}
 LocalDiscovery = yes
 Interface = {{.Net}}
 Port = {{.Port}}
+{{range .ConnectTo}}
+ConnectTo = {{.}}
+{{end}}
 `))
 
 type TincConfParam struct {
-	Name string
-	Net  string
-	Port int
+	Name      string
+	Net       string
+	Port      int
+	ConnectTo []string
 }
 
 func (cfg *TincConfParam) Render() ([]byte, error) {

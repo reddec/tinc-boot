@@ -38,6 +38,7 @@ type Cmd struct {
 	NoBinCopy  bool          `long:"no-bin-copy" env:"NO_BIN_COPY" description:"Disable copy tinc-boot binary"`
 	NoGenKey   bool          `long:"no-gen-key" env:"NO_GEN_KEY" description:"Disable key generation"`
 	Port       int           `long:"port" env:"PORT" description:"Node port (first available will be got if not set)"`
+	ConnectTo  []string      `long:"connect-to" env:"CONNECT_TO" description:"Add ConnectTo instruction (recommended nodes to connect)"`
 	Public     []string      `short:"a" alias:"addr" long:"public" env:"PUBLIC" description:"Public addresses that could be used for incoming connections"`
 	Standalone bool          `long:"standalone" env:"STANDALONE" description:"Do not use bootnodes (usefull for very-very first initialization)"`
 	Args       struct {
@@ -158,9 +159,10 @@ func (cmd *Cmd) Execute(args []string) error {
 		return err
 	}
 	err = cmd.file("tinc.conf")(&scripts.TincConfParam{
-		Name: cmd.Name,
-		Net:  cmd.Network,
-		Port: cmd.Port,
+		Name:      cmd.Name,
+		Net:       cmd.Network,
+		Port:      cmd.Port,
+		ConnectTo: cmd.ConnectTo,
 	})
 	if err != nil {
 		return err
