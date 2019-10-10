@@ -19,11 +19,11 @@ import (
 )
 
 const (
-	defMask     = 16
-	defNetwork  = "dnet"
-	defPlatform = "amd64"
-	defPrefix   = "172.173"
-	defKeyBits  = 4096
+	DefMask     = 16
+	DefNetwork  = "dnet"
+	DefPlatform = "amd64"
+	DefPrefix   = "172.173"
+	DefKeyBits  = 4096
 )
 
 const (
@@ -32,15 +32,14 @@ const (
 )
 
 type Config struct {
-	Platform string   `form:"platform"`
-	Network  string   `form:"network"`
-	Name     string   `form:"name"`
-	Config   string   `form:"config"`
-	Prefix   string   `form:"prefix"`
-	Mask     int      `form:"mask"`
-	Port     int      `form:"port"`
-	KeyBits  int      `form:"keybits"`
-	Public   []string `form:"public"`
+	Platform string   `form:"platform"` // optional, target platform name (amd64, arm64, ...). Used to create link to download binary
+	Network  string   `form:"network"`  // optional, network name (also device name)
+	Name     string   `form:"name"`     // required
+	Prefix   string   `form:"prefix"`   // optional
+	Mask     int      `form:"mask"`     // optional
+	Port     int      `form:"port"`     // optional, default random in range 1024-65535
+	KeyBits  int      `form:"keybits"`  // optional
+	Public   []string `form:"public"`   // optional, list of public ip for the node
 }
 
 type Assembly struct {
@@ -54,19 +53,19 @@ func (cfg *Config) Generate(currentNetDir string) (*Assembly, error) {
 		return nil, errors.New("name not defined")
 	}
 	if cfg.Mask == 0 {
-		cfg.Mask = defMask
+		cfg.Mask = DefMask
 	}
 	if cfg.Network == "" {
-		cfg.Network = defNetwork
+		cfg.Network = DefNetwork
 	}
 	if cfg.Platform == "" {
-		cfg.Platform = defPlatform
+		cfg.Platform = DefPlatform
 	}
 	if cfg.Prefix == "" {
-		cfg.Prefix = defPrefix
+		cfg.Prefix = DefPrefix
 	}
 	if cfg.KeyBits == 0 {
-		cfg.KeyBits = defKeyBits
+		cfg.KeyBits = DefKeyBits
 	}
 	disabledSymbols := regexp.MustCompile(filterPattern)
 
