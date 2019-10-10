@@ -27,8 +27,7 @@ const (
 )
 
 const (
-	minimalPort   = 1024
-	filterPattern = `[^a-z0-9]+`
+	minimalPort = 1024
 )
 
 type Config struct {
