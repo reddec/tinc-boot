@@ -10,6 +10,10 @@ import (
 	"path/filepath"
 )
 
+type NodeList struct {
+	Nodes []*Node `json:"nodes"`
+}
+
 func (ms *service) createAPI() *gin.Engine {
 	gin.SetMode(gin.ReleaseMode)
 	engine := gin.Default()
@@ -82,9 +86,7 @@ func (ms *service) apiKillNode(gctx *gin.Context) {
 }
 
 func (ms *service) apiListNodes(gctx *gin.Context) {
-	var reply struct {
-		Nodes []*Node `json:"nodes"`
-	}
+	var reply NodeList
 	reply.Nodes = ms.nodes.Copy()
 	gctx.JSON(http.StatusOK, reply)
 }
