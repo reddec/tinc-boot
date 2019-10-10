@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/phayes/permbits"
 	"github.com/reddec/tinc-boot/scripts"
+	"github.com/reddec/tinc-boot/types"
 	"golang.org/x/crypto/chacha20poly1305"
 	"io"
 	"io/ioutil"
@@ -20,7 +21,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -95,11 +95,8 @@ func (cmd *Cmd) Execute(args []string) error {
 		return err
 	}
 	cmd.Bin = absBin
-
-	disabledSymbols := regexp.MustCompile(`[^a-z0-9]+`)
-
-	cmd.Network = disabledSymbols.ReplaceAllString(strings.ToLower(cmd.Network), "")
-	cmd.Name = disabledSymbols.ReplaceAllString(strings.ToLower(cmd.Name), "")
+	cmd.Network = types.CleanString(cmd.Network)
+	cmd.Name = types.CleanString(cmd.Name)
 	ip, err := cmd.generateIP()
 	if err != nil {
 		return err

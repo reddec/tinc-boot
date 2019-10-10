@@ -8,11 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"github.com/reddec/tinc-boot/scripts"
+	"github.com/reddec/tinc-boot/types"
 	"io/ioutil"
 	"math/rand"
 	"net"
 	"path/filepath"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -67,10 +67,8 @@ func (cfg *Config) Generate(currentNetDir string) (*Assembly, error) {
 	if cfg.KeyBits == 0 {
 		cfg.KeyBits = DefKeyBits
 	}
-	disabledSymbols := regexp.MustCompile(filterPattern)
-
-	cfg.Network = disabledSymbols.ReplaceAllString(strings.ToLower(cfg.Network), "")
-	cfg.Name = disabledSymbols.ReplaceAllString(strings.ToLower(cfg.Name), "")
+	cfg.Network = types.CleanString(cfg.Network)
+	cfg.Name = types.CleanString(cfg.Name)
 	if cfg.Name == "" {
 		return nil, errors.New("name contains only disabled symbols")
 	}

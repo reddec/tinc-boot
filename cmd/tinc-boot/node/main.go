@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/reddec/tinc-boot/types"
 	"golang.org/x/crypto/chacha20poly1305"
 	"io"
 	"io/ioutil"
@@ -15,7 +16,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"text/template"
 	"time"
 )
@@ -55,8 +55,7 @@ func (cmd *Cmd) Execute(args []string) error {
 		}
 		cmd.Name = hostname
 	}
-	disabledSymbols := regexp.MustCompile(`[^a-z0-9]+`)
-	cmd.Name = disabledSymbols.ReplaceAllString(strings.ToLower(cmd.Name), "")
+	cmd.Name = types.CleanString(cmd.Name)
 
 	tokenData := sha256.Sum256([]byte(cmd.Token)) // normalize to 32 bytes
 	crypter, err := chacha20poly1305.NewX(tokenData[:])
