@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/reddec/tinc-boot/types"
 	"html/template"
+	"io/ioutil"
 	"net/http"
 	"path/filepath"
 )
@@ -20,7 +21,27 @@ func (ms *service) createAPI() *gin.Engine {
 	engine.POST("/rpc/kill", ms.apiKillNode)
 	engine.GET("/rpc/nodes", ms.apiListNodes)
 	engine.GET("/rpc/node/:node/hostfile", ms.apiGetNodeFile)
+	engine.POST("/rpc/node/:node/hostfile", ms.apiPushNodeFile)
 	return engine
+}
+
+func (ms *service) apiPushNodeFile(gctx *gin.Context) {
+	hostName := types.CleanString(gctx.Param("node"))
+	if hostName == "" {
+		gctx.AbortWithStatus(http.StatusBadRequest)
+		return
+	}
+	data, err := gctx.GetRawData()
+	if err != nil {
+		gctx.AbortWithError(http.StatusBadRequest, err)
+		return
+	}
+	err = ioutil.WriteFile(filepath.Join(ms.cfg.Hosts(), hostName), data, 0755)
+	if err != nil {
+		gctx.AbortWithError(http.StatusInternalServerError, err)
+		return
+	}
+	gctx.AbortWithStatus(http.StatusNoContent)
 }
 
 func (ms *service) apiServeHostFile(gctx *gin.Context) {
