@@ -3,9 +3,11 @@ package monitor
 import (
 	"bytes"
 	"github.com/gin-gonic/gin"
+	"github.com/reddec/tinc-boot/domain/generator"
 	"github.com/reddec/tinc-boot/types"
 	"html/template"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"path/filepath"
 )
@@ -20,6 +22,7 @@ func (ms *service) createAPI() *gin.Engine {
 
 	engine.GET("/", ms.apiServeHostFile)
 	engine.GET("/ui", ms.apiUiNodes)
+	engine.POST("/ui", ms.apiUiAddNode)
 	engine.POST("/rpc/watch", ms.apiWatchNode)
 	engine.POST("/rpc/forget", ms.apiForgetNode)
 	engine.POST("/rpc/kill", ms.apiKillNode)
@@ -96,12 +99,56 @@ func (ms *service) apiGetNodeFile(gctx *gin.Context) {
 	gctx.File(filepath.Join(ms.cfg.Hosts(), node))
 }
 
+func (ms *service) apiUiAddNode(gctx *gin.Context) {
+	var params = generator.Config{
+		Network: ms.cfg.Network(),
+	}
+	if err := gctx.Bind(&params); err != nil {
+		return
+	}
+	assembly, err := params.Generate(ms.cfg.Dir)
+	if err != nil {
+		ms.renderMainPage(gctx, err, "")
+		return
+	}
+	var atLeastOnePublic bool
+	for _, node := range ms.nodes.Copy() {
+		if err := node.Client().PushNodeFile(params.Name, assembly.PublicKey); err != nil {
+			log.Println("UI", err)
+		} else if node.Public {
+			atLeastOnePublic = true
+		}
+	}
+
+	if !atLeastOnePublic {
+		ms.renderMainPage(gctx, nil, "can't distribute even to one public node")
+		return
+	}
+
+	gctx.Header("Content-Disposition", "attachment; filename=\""+params.Name+".sh\"")
+	gctx.Data(http.StatusOK, "application/bash", assembly.Script)
+}
+
 //go:generate go-bindata -o assets.go -pkg monitor --prefix assets/ assets/
 func (ms *service) apiUiNodes(gctx *gin.Context) {
-	nodes := ms.nodes.Copy()
+	ms.renderMainPage(gctx, nil, "")
+}
+
+func (ms *service) renderMainPage(gctx *gin.Context, responseErr error, warn string) {
+	list := ms.nodes.Copy()
+	var hasPublic bool
+	for _, n := range list {
+		if n.Public {
+			hasPublic = true
+			break
+		}
+	}
 	ms.renderTemplate(gctx, "nodes.gotemplate", gin.H{
-		"Nodes":   nodes,
-		"Service": ms,
+		"Nodes":     list,
+		"Service":   ms,
+		"Error":     responseErr,
+		"Warning":   warn,
+		"HasPublic": hasPublic,
 	})
 }
 

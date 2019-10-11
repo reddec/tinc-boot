@@ -25,10 +25,17 @@ type Config struct {
 	Reindex  time.Duration `long:"reindex" env:"REINDEX" description:"Reindex interval" default:"1m"`
 }
 
-func (cfg *Config) Hosts() string    { return filepath.Join(cfg.Dir, "hosts") }
+func (cfg *Config) Root() string {
+	r, err := filepath.Abs(cfg.Dir)
+	if err != nil {
+		panic(err)
+	}
+	return r
+}
+func (cfg *Config) Hosts() string    { return filepath.Join(cfg.Root(), "hosts") }
 func (cfg *Config) HostFile() string { return filepath.Join(cfg.Hosts(), cfg.Name) }
-func (cfg *Config) TincConf() string { return filepath.Join(cfg.Dir, "tinc.conf") }
-func (cfg *Config) Network() string  { return filepath.Base(cfg.Dir) }
+func (cfg *Config) TincConf() string { return filepath.Join(cfg.Root(), "tinc.conf") }
+func (cfg *Config) Network() string  { return filepath.Base(cfg.Root()) }
 
 func (cfg *Config) Binding() (string, error) {
 	ief, err := net.InterfaceByName(cfg.Iface)

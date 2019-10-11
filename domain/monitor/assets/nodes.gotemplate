@@ -10,6 +10,7 @@
             display: flex;
             justify-content: center;
         }
+
         .card {
             margin: 16px;
             padding: 5px;
@@ -17,15 +18,18 @@
             border-radius: 3px;
             box-shadow: 0px 1px 3px #777777;
         }
+
         .name {
             font-size: large;
             font-weight: bold;
             padding-top: 3px;
             padding-bottom: 5px;
         }
+
         .subnet {
             font-family: monospace;
         }
+
         .status-pending {
             float: right;
             padding: 3px;
@@ -35,6 +39,7 @@
             color: #336699;
             text-decoration: none;
         }
+
         .hostfile {
             float: right;
             padding: 3px;
@@ -45,15 +50,18 @@
             color: white;
             text-decoration: none;
         }
+
         .container {
             display: block;
             vertical-align: middle;
             width: 800px;
         }
+
         .public {
             font-weight: 100 !important;
             color: #84a3e1;
         }
+
         .meta {
             margin: 16px;
             color: #84a3e1;
@@ -72,13 +80,107 @@
         .meta > a:hover {
             text-decoration: underline;
         }
+
+        hr {
+            border: 1px solid #336699;
+            border-radius: 2px;
+            box-shadow: 0px 1px 2px #777777;
+            margin: 16px;
+        }
+
+        form {
+            border-radius: 2px;
+            box-shadow: 0px 1px 3px #777777;
+            margin: 16px;
+            padding: 6px;
+        }
+
+        label {
+            font-weight: bold;
+            font-size: small;
+            display: inline-block;
+            padding: 3px;
+            margin-bottom: 3px;
+        }
+
+        input {
+            display: inline-block;
+            border: none;
+            border-bottom: 1px dashed #777777;
+        }
+
+        .gen {
+            border-radius: 3px 3px 3px 3px;
+            padding: 6px;
+            background-color: #336699;
+            color: white;
+            border: none;
+            font-size: large;
+            width: 100%;
+        }
+
+        .footer {
+            text-align: center;
+        }
+
+        select {
+            display: inline-block;
+            border: none;
+            border-bottom: 1px dashed #777777;
+            background-color: white;
+        }
+
+        .err {
+            border-radius: 2px;
+            box-shadow: 0px 1px 3px #777777;
+            margin: 16px;
+            padding: 6px;
+            border-left: 4px solid #ff0000;
+        }
+
+        .warn {
+            border-radius: 2px;
+            box-shadow: 0px 1px 3px #777777;
+            margin: 16px;
+            padding: 6px;
+            border-left: 4px solid #ffaa00;
+        }
+
+        .add {
+            border-radius: 3px 3px 3px 3px;
+            padding: 6px;
+            background-color: #84a3e1;
+            color: white;
+            border: none;
+            margin: 1px;
+        }
+
     </style>
 </head>
 <body>
 
 <div class="container">
+    {{with .Error}}
+        <div class="err">
+            <h3>Error</h3>
+            <p>{{.}}</p>
+        </div>
+    {{end}}
+    {{with .Warning}}
+        <div class="warn">
+            <h3>Warning</h3>
+            <p>{{.}}</p>
+        </div>
+    {{end}}
+    {{if not .HasPublic}}
+        <div class="warn">
+            <h3>Warning</h3>
+            <p>no public nodes available in the network</p>
+        </div>
+    {{end}}
     <div class="meta">
-        <a href="../" download="{{.Service.Config.Name}}">{{.Service.Config.Name}}</a>, <span class="meta-address">{{.Service.Address}}</span>
+        <a href="../" download="{{.Service.Config.Name}}">{{.Service.Config.Name}}</a>, <span
+                class="meta-address">{{.Service.Address}}</span>
     </div>
     {{range .Nodes}}
         {{if .Fetched}}
@@ -95,6 +197,76 @@
             </div>
         {{end}}
     {{end}}
+    {{if .HasPublic}}
+        <form method="POST">
+            <h2>Generate node script</h2>
+            <label>
+                Unique node name (required)
+                <input type="text" placeholder="Node name" pattern="[a-z0-9]+" name="name"/>
+            </label>
+            <br/>
+            <br/>
+            <label>
+                Platform
+                <select name="platform">
+                    <option value="amd64" selected>x86-64</option>
+                    <option value="i386">x86-32</option>
+                    <option value="arm64">ARM64</option>
+                    <option value="armv7">ARM-7</option>
+                    <option value="armv6">ARM-6</option>
+                    <option value="armv5">ARM-5</option>
+                </select>
+            </label>
+            <label>
+                Prefix
+                <input type="text" placeholder="x.y.z.t" name="prefix" value="172.173"/>
+            </label>
+            <label>
+                Mask
+                <input type="number" placeholder="8, 16, 24, 32" name="mask" value="16" pattern="[0-9]+" min="8"
+                       max="32"/>
+            </label>
+            <label>
+                Port
+                <input type="number" placeholder="random" name="port" value="" pattern="[0-9]+" min="0"
+                       max="65535"/>
+            </label>
+            <br/>
+            <div>
+                <ul id="publics">
+                </ul>
+                <button type="button" onclick="addPublic()" class="add">
+                    Add public address
+                </button>
+            </div>
+            <br/>
+            <div class="footer">
+                <button type="submit" class="gen">Generate</button>
+            </div>
+        </form>
+    {{end}}
 </div>
+<script>
+
+    function addPublic() {
+        var li = document.createElement('li');
+        var inp = document.createElement('input');
+        li.appendChild(inp);
+        inp.setAttribute("type", "text");
+        inp.setAttribute("name", "public");
+        inp.setAttribute("placeholder", "public address");
+
+        var btn = document.createElement("button");
+        li.append(btn);
+        btn.setAttribute("type", "button");
+        btn.setAttribute("class", "add");
+        btn.innerText = "remove";
+        btn.onclick = function () {
+            document.getElementById("publics").removeChild(li);
+        };
+
+        document.getElementById("publics").appendChild(li);
+    }
+</script>
 </body>
 </html>

@@ -22,6 +22,10 @@ func (n *Node) Done() <-chan struct{} {
 	return n.ctx.Done()
 }
 
+func (n *Node) Client() Client {
+	return ClientBySubnet(n.Subnet)
+}
+
 type NodeArray struct {
 	nodes []*Node
 	lock  sync.RWMutex
