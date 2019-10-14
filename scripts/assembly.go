@@ -75,8 +75,8 @@ cat - >> "$ROOT/hosts/{{$name}}" <<EOF
 EOF
 {{end}}
 
-mkdir /dev/net
-mknod /dev/net/tun c 10 200
+mkdir -p /dev/net
+if [ ! -e /dev/net/tun ]; then  mknod /dev/net/tun c 10 200; fi
 
 systemctl enable tinc@${NETWORK}
 systemctl start tinc@${NETWORK}
