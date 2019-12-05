@@ -62,6 +62,7 @@ func (ms *service) apiWatchNode(gctx *gin.Context) {
 	}
 	node := ms.nodes.TryAdd(ms.globalContext, subnet.Node, subnet.Subnet)
 	if node != nil {
+		ms.events.Connected.emit(node)
 		ms.pool.Add(1)
 		go func() {
 			ms.requestNode(node)
@@ -78,6 +79,7 @@ func (ms *service) apiForgetNode(gctx *gin.Context) {
 	}
 	node := ms.nodes.TryRemove(subnet.Node)
 	if node != nil {
+		ms.events.Disconnected.emit(node)
 		node.Stop()
 	}
 	gctx.AbortWithStatus(http.StatusNoContent)

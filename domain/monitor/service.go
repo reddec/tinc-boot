@@ -23,8 +23,10 @@ type Config struct {
 	Timeout  time.Duration `long:"timeout" env:"TIMEOUT" description:"Attempt timeout" default:"30s"`
 	Interval time.Duration `long:"interval" env:"INTERVAL" description:"Retry interval" default:"10s"`
 	Reindex  time.Duration `long:"reindex" env:"REINDEX" description:"Reindex interval" default:"1m"`
+	events   monitorEvents
 }
 
+func (cfg *Config) Events() *monitorEvents { return &cfg.events }
 func (cfg *Config) Root() string {
 	r, err := filepath.Abs(cfg.Dir)
 	if err != nil {
@@ -61,6 +63,7 @@ func (cfg Config) CreateAndRun(ctx context.Context) (*service, error) {
 		reindexEvent:  make(chan struct{}, 1),
 		address:       bind,
 		cancel:        cancel,
+		events:        cfg.events,
 	}
 	listener, err := net.Listen("tcp", bind)
 	if err != nil {
@@ -90,7 +93,7 @@ func (cfg Config) CreateAndRun(ctx context.Context) (*service, error) {
 		srv.reindexLoop()
 		srv.pool.Done()
 	}()
-
+	srv.events.Started.emit(srv)
 	return srv, nil
 }
 
@@ -99,17 +102,21 @@ func (ms *service) WaitForFinish() error {
 	return allErr(ms.httpErr)
 }
 
+//event:"Started,ref"
 type service struct {
 	cfg           Config
 	nodes         NodeArray
 	globalContext context.Context
 	pool          sync.WaitGroup
 	initTemplates sync.Once
+	events        monitorEvents
 	reindexEvent  chan struct{}
 	address       string
 	cancel        func()
 	httpErr       error
 }
+
+func (ms *service) Events() *monitorEvents { return &ms.events }
 
 func (ms *service) Stop() {
 	ms.cancel()
@@ -218,6 +225,7 @@ func (ms *service) requestNode(node *Node) {
 			node.Fetched = true
 			node.Public = strings.Contains(string(data), "Address")
 			ms.askForIndex()
+			ms.events.Fetched.emit(node)
 			return
 		}
 		select {

@@ -5,6 +5,10 @@ import (
 	"sync"
 )
 
+//go:generate events-gen -p monitor -o events.go -k --event-bus monitorEvents -P
+//event:"Connected,ref"
+//event:"Disconnected,ref"
+//event:"Fetched,ref"
 type Node struct {
 	Name    string `json:"name"`
 	Subnet  string `json:"subnet"`
