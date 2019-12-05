@@ -3,6 +3,8 @@ package monitor
 import (
 	"context"
 	"errors"
+	"github.com/gin-gonic/gin"
+	"github.com/reddec/struct-view/support/events"
 	"io/ioutil"
 	"log"
 	"net"
@@ -14,42 +16,6 @@ import (
 	"sync"
 	"time"
 )
-
-type Config struct {
-	Iface    string        `long:"iface" env:"INTERFACE" description:"Interface to bind" required:"yes"`
-	Dir      string        `long:"dir" env:"DIR" description:"Configuration directory" default:"."`
-	Name     string        `long:"name" env:"NAME" description:"Self node name" required:"yes"`
-	Port     int           `long:"port" env:"PORT" description:"Port to bind (should same for all hosts)" default:"1655"`
-	Timeout  time.Duration `long:"timeout" env:"TIMEOUT" description:"Attempt timeout" default:"30s"`
-	Interval time.Duration `long:"interval" env:"INTERVAL" description:"Retry interval" default:"10s"`
-	Reindex  time.Duration `long:"reindex" env:"REINDEX" description:"Reindex interval" default:"1m"`
-	events   monitorEvents
-}
-
-func (cfg *Config) Events() *monitorEvents { return &cfg.events }
-func (cfg *Config) Root() string {
-	r, err := filepath.Abs(cfg.Dir)
-	if err != nil {
-		panic(err)
-	}
-	return r
-}
-func (cfg *Config) Hosts() string    { return filepath.Join(cfg.Root(), "hosts") }
-func (cfg *Config) HostFile() string { return filepath.Join(cfg.Hosts(), cfg.Name) }
-func (cfg *Config) TincConf() string { return filepath.Join(cfg.Root(), "tinc.conf") }
-func (cfg *Config) Network() string  { return filepath.Base(cfg.Root()) }
-
-func (cfg *Config) Binding() (string, error) {
-	ief, err := net.InterfaceByName(cfg.Iface)
-	if err != nil {
-		return "", err
-	}
-	addrs, err := ief.Addrs()
-	if err != nil {
-		return "", err
-	}
-	return addrs[0].(*net.IPNet).IP.String() + ":" + strconv.Itoa(cfg.Port), nil
-}
 
 func (cfg Config) CreateAndRun(ctx context.Context) (*service, error) {
 	bind, err := cfg.Binding()
@@ -71,10 +37,16 @@ func (cfg Config) CreateAndRun(ctx context.Context) (*service, error) {
 	}
 	api := srv.createAPI()
 
+	// events streaming over HTTP/WS
+	stream := events.NewWebsocketStream()
+	srv.events.Sink(stream.Feed)
+	api.GET("/rpc/ws", gin.WrapH(stream.Handler()))
+
 	srv.pool.Add(1)
 	go func() {
 		<-gctx.Done()
 		listener.Close()
+		stream.Close()
 		srv.pool.Done()
 	}()
 
@@ -93,16 +65,9 @@ func (cfg Config) CreateAndRun(ctx context.Context) (*service, error) {
 		srv.reindexLoop()
 		srv.pool.Done()
 	}()
-	srv.events.Started.emit(srv)
 	return srv, nil
 }
 
-func (ms *service) WaitForFinish() error {
-	ms.pool.Wait()
-	return allErr(ms.httpErr)
-}
-
-//event:"Started,ref"
 type service struct {
 	cfg           Config
 	nodes         NodeArray
@@ -114,6 +79,11 @@ type service struct {
 	address       string
 	cancel        func()
 	httpErr       error
+}
+
+func (ms *service) WaitForFinish() error {
+	ms.pool.Wait()
+	return allErr(ms.httpErr)
 }
 
 func (ms *service) Events() *monitorEvents { return &ms.events }

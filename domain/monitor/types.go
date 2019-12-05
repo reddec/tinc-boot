@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-//go:generate events-gen -p monitor -o events.go -k --event-bus monitorEvents -P
+//go:generate events-gen -s -p monitor -o events.go -k --event-bus monitorEvents -P
 //event:"Connected,ref"
 //event:"Disconnected,ref"
 //event:"Fetched,ref"
