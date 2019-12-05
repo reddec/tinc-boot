@@ -52,6 +52,10 @@ With simple UI (available on your VPN address with port 1655 by default)
 
 ![image](https://user-images.githubusercontent.com/6597086/66646721-92c2df80-ec59-11e9-90b3-153b50dd38be.png)
 
+Donating always welcome
+
+* ETH: `0xA4eD4fB5805a023816C9B55C52Ae056898b6BdBC`
+* BTC: `bc1qlj4v32rg8w0sgmtk8634uc36evj6jn3d5drnqy`
 
 
 ## Installation
@@ -135,7 +139,7 @@ and follow recommendations
 # How it works
 
 * [Обзор (RU)](https://habr.com/ru/post/468213)
-* Overview (EN) - coming soon
+* [Overview (EN)](https://dev.to/reddec/tinc-boot-full-mesh-vpn-without-pain-3lg9)
 
 ![overview](https://user-images.githubusercontent.com/6597086/65752642-ca049d00-e13f-11e9-86ff-05134129eb86.png)
 
