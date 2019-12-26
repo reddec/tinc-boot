@@ -44,7 +44,7 @@ archives:
     Linux: linux
     386: i386
   name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}"
-  files:SS
+  files:
     - MANUAL.md
     - LICENSE
     - README.md
