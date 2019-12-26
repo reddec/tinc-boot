@@ -6,6 +6,8 @@
 
 Idea to create a easy-to-use wrapper over [tinc vpn](https://www.tinc-vpn.org).
 
+[skip to installation](#installation)
+
 Tinc VPN - is full-mesh, auto-healing, time-proofed VPN system without single point of failure, with high-throughput and
 serious cryptography. 
 All nodes in a Tinc network are fully equal. New nodes discovering full topology through any entry point. 
@@ -64,13 +66,20 @@ Donating always welcome
 
 ## Installation
 
-* (recommended) look at releases page and download
+* (recommended) look at  [releases](https://github.com/reddec/tinc_boot/releases) page and download
 * one line shell command:
 ```
 curl -L https://github.com/reddec/tinc-boot/releases/latest/download/tinc-boot_linux_amd64.tar.gz | sudo tar -xz -C /usr/local/bin/ tinc-boot
 ```
 * build from source `go get -v github.com/reddec/tinc-boot/cmd/...`
 * [Ansible galaxy](https://galaxy.ansible.com/reddec/tinc_boot): `ansible-galaxy install reddec.tinc_boot`
+
+* From bintray repository for most **debian**-based distribution (`trusty`, `xenial`, `bionic`, `buster`, `wheezy`):
+```bash
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 379CE192D401AB61
+echo "deb https://dl.bintray.com/reddec/debian {distribution} main" | sudo tee -a /etc/apt/sources.list
+sudo apt install tinc-boot
+```
 
 ### Build requirements
 
