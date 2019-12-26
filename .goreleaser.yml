@@ -20,8 +20,6 @@ builds:
     - 7
   goos:
     - linux
-  gcflags:
-    - all=-trimpath={{.Env.GOPATH}}
   flags:
     - -trimpath
 nfpms:
