@@ -20,6 +20,8 @@ builds:
     - 7
   goos:
     - linux
+    - windows
+    - darwin
   flags:
     - -trimpath
 nfpms:

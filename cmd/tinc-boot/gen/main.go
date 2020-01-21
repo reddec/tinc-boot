@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/phayes/permbits"
+	"github.com/reddec/tinc-boot/cmd/tinc-boot/gen/internal"
 	"github.com/reddec/tinc-boot/scripts"
 	"github.com/reddec/tinc-boot/types"
 	"golang.org/x/crypto/chacha20poly1305"
@@ -27,14 +28,13 @@ import (
 )
 
 type Cmd struct {
+	internal.Platform
 	Network    string        `long:"network" env:"NETWORK" description:"Network name" default:"dnet"`
 	Name       string        `long:"name" env:"NAME" description:"Self node name (trimmed hostname will be used if empty)"`
-	Config     string        `long:"dir" env:"DIR" description:"Configuration directory" default:"/etc/tinc"`
 	Token      string        `short:"t" long:"token" env:"TOKEN" description:"Authorization token (used as a encryption key)"`
 	Prefix     string        `long:"prefix" env:"PREFIX" description:"Address prefix (left segments will be randomly auto generated)" default:"172.173"`
 	Mask       int           `long:"mask" env:"MASK" description:"Network mask" default:"16"`
 	Timeout    time.Duration `long:"timeout" env:"TIMEOUT" description:"Boot node request timeout" default:"15s"`
-	Bin        string        `long:"bin" env:"BIN" description:"tinc-boot location" default:"/usr/local/bin/tinc-boot"`
 	NoBinCopy  bool          `long:"no-bin-copy" env:"NO_BIN_COPY" description:"Disable copy tinc-boot binary"`
 	NoGenKey   bool          `long:"no-gen-key" env:"NO_GEN_KEY" description:"Disable key generation"`
 	Port       int           `long:"port" env:"PORT" description:"Node port (first available will be got if not set)"`
@@ -227,7 +227,7 @@ func (cmd *Cmd) runKeyGen() error {
 	if cmd.NoGenKey {
 		return nil
 	}
-	keyCmd := exec.Command("tincd", "-c", cmd.Dir(), "-K", "4096")
+	keyCmd := exec.Command(cmd.TincBin, "-c", cmd.Dir(), "-K", "4096")
 	keyCmd.Stdin = bytes.NewBufferString("\n\n")
 	keyCmd.Stdout = os.Stdout
 	keyCmd.Stderr = os.Stderr
