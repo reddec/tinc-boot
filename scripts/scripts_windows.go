@@ -6,6 +6,8 @@ import (
 	"text/template"
 )
 
+const Extension = ".bat"
+
 var TincUp = template.Must(template.New("").Parse(`
 netsh interface ip set dns '%INTERFACE%' static {{.Addr}} {{.MaskAsAddr}}
 start /B {{.Bin}} monitor

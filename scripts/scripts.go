@@ -7,6 +7,8 @@ import (
 	"text/template"
 )
 
+const Extension = ""
+
 var TincUp = template.Must(template.New("").Parse(`#!/usr/bin/env bash
 ip addr add {{.Addr}}/{{.Mask}} dev $INTERFACE
 ip link set dev $INTERFACE up

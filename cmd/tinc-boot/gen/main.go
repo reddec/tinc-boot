@@ -282,7 +282,7 @@ type Render interface {
 }
 
 func (cmd *Cmd) script(name string) func(render Render) error {
-	filename := filepath.Join(cmd.Dir(), name)
+	filename := filepath.Join(cmd.Dir(), name+scripts.Extension)
 	return func(render Render) error {
 		err := os.MkdirAll(filepath.Dir(filename), 0755)
 		if err != nil {
