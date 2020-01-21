@@ -2,13 +2,13 @@ package scripts
 
 import (
 	"bytes"
+	"net"
 	"text/template"
 )
 
-var TincUp = template.Must(template.New("").Parse(`#!/usr/bin/env bash
-ip addr add {{.Addr}}/{{.Mask}} dev $INTERFACE
-ip link set dev $INTERFACE up
-{{.Bin}} monitor &
+var TincUp = template.Must(template.New("").Parse(`
+netsh interface ip set dns '%INTERFACE%' static {{.Addr}} {{.MaskAsAddr}}
+start /B {{.Bin}} monitor
 `))
 
 type TincUpParam struct {
@@ -16,6 +16,8 @@ type TincUpParam struct {
 	Mask int
 	Bin  string
 }
+
+func (tup TincUpParam) MaskAsAddr() string { return maskIpV4AsSubnet(tup.Mask) }
 
 func (cfg *TincUpParam) Render() ([]byte, error) {
 	buf := &bytes.Buffer{}
@@ -110,4 +112,9 @@ func (cfg *HostParam) Render() ([]byte, error) {
 	buf := &bytes.Buffer{}
 	err := Host.Execute(buf, *cfg)
 	return buf.Bytes(), err
+}
+
+func maskIpV4AsSubnet(bits int) string {
+	mask := net.CIDRMask(16, 8*net.IPv4len)
+	return net.IPv4(mask[0], mask[1], mask[2], mask[3]).String()
 }
