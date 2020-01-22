@@ -27,10 +27,8 @@ func (cfg *TincUpParam) Render() ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-var TincDown = template.Must(template.New("").Parse(`#!/usr/bin/env bash
+var TincDown = template.Must(template.New("").Parse(`
 {{.Bin}} kill
-ip addr del {{.Addr}}/{{.Mask}} dev $INTERFACE
-ip link set dev $INTERFACE down
 `))
 
 type TincDownParam struct {
@@ -68,7 +66,7 @@ func (cfg *TincConfParam) Render() ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-var SubnetUp = template.Must(template.New("").Parse(`#!/usr/bin/env bash
+var SubnetUp = template.Must(template.New("").Parse(`
 {{.Bin}} watch
 `))
 
@@ -82,7 +80,7 @@ func (cfg *SubnetUpParam) Render() ([]byte, error) {
 	return buf.Bytes(), err
 }
 
-var SubnetDown = template.Must(template.New("").Parse(`#!/usr/bin/env bash
+var SubnetDown = template.Must(template.New("").Parse(`
 {{.Bin}} forget
 `))
 
