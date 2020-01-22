@@ -162,6 +162,8 @@ Non-primary platform, limited support, but should work
 
 Tested only for x64
 
+[See proof on Youtube](https://youtu.be/w84R66JVEE8)
+
 Requirements:
 
 1. Tinc for Windows: [download on official site](https://www.tinc-vpn.org/)
