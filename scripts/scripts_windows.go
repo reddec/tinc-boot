@@ -10,7 +10,7 @@ const Extension = ".bat"
 
 var TincUp = template.Must(template.New("").Parse(`
 netsh interface ip set dns '%INTERFACE%' static {{.Addr}} {{.MaskAsAddr}}
-start /B {{.Bin}} monitor
+start /B "" "{{.Bin}}" monitor
 `))
 
 type TincUpParam struct {
@@ -28,7 +28,7 @@ func (cfg *TincUpParam) Render() ([]byte, error) {
 }
 
 var TincDown = template.Must(template.New("").Parse(`
-{{.Bin}} kill
+"{{.Bin}}" kill
 `))
 
 type TincDownParam struct {
@@ -67,7 +67,7 @@ func (cfg *TincConfParam) Render() ([]byte, error) {
 }
 
 var SubnetUp = template.Must(template.New("").Parse(`
-{{.Bin}} watch
+"{{.Bin}}" watch
 `))
 
 type SubnetUpParam struct {
@@ -81,7 +81,7 @@ func (cfg *SubnetUpParam) Render() ([]byte, error) {
 }
 
 var SubnetDown = template.Must(template.New("").Parse(`
-{{.Bin}} forget
+"{{.Bin}}" forget
 `))
 
 type SubnetDownParam struct {
