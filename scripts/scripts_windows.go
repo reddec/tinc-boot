@@ -9,7 +9,7 @@ import (
 const Extension = ".bat"
 
 var TincUp = template.Must(template.New("").Parse(`
-netsh interface ip set dns '%INTERFACE%' static {{.Addr}} {{.MaskAsAddr}}
+netsh interface ipv4 set address name="%INTERFACE%" static {{.Addr}} {{.MaskAsAddr}} store=persistent
 start /B "" "{{.Bin}}" monitor
 `))
 
