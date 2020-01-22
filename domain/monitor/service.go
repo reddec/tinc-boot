@@ -17,6 +17,8 @@ import (
 	"time"
 )
 
+const retryInterval = 3 * time.Second
+
 func (cfg Config) CreateAndRun(ctx context.Context) (*service, error) {
 	bind, err := cfg.Binding()
 	if err != nil {
@@ -31,9 +33,22 @@ func (cfg Config) CreateAndRun(ctx context.Context) (*service, error) {
 		cancel:        cancel,
 		events:        cfg.events,
 	}
-	listener, err := net.Listen("tcp", bind)
-	if err != nil {
-		return nil, err
+
+	var listener net.Listener
+
+	for {
+		serverListener, err := net.Listen("tcp", bind)
+		if err != nil {
+			log.Println(err)
+		} else {
+			listener = serverListener
+			break
+		}
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(retryInterval):
+		}
 	}
 	api := srv.createAPI()
 

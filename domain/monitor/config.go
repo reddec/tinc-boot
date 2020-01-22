@@ -1,6 +1,7 @@
 package monitor
 
 import (
+	"errors"
 	"net"
 	"path/filepath"
 	"strconv"
@@ -40,5 +41,10 @@ func (cfg *Config) Binding() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return addrs[0].(*net.IPNet).IP.String() + ":" + strconv.Itoa(cfg.Port), nil
+	for _, addr := range addrs {
+		if v, ok := addr.(*net.IPNet); ok && v.IP.IsGlobalUnicast() {
+			return v.IP.String() + ":" + strconv.Itoa(cfg.Port), nil
+		}
+	}
+	return "127.0.0.1:0", errors.New("unable to detect binding address")
 }
