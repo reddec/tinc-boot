@@ -158,11 +158,21 @@ and follow recommendations
 
 # Windows
 
+Non-primary platform, limited support, but should work
+
 Tested only for x64
 
 Requirements:
 
-* Tinc for Windows: [download on official site](https://www.tinc-vpn.org/)
-* **Install TAP driver**!:
+1. Tinc for Windows: [download on official site](https://www.tinc-vpn.org/)
+2. **Install TAP driver**!:
   * Go to `C:\Program Files(x86)\tinc\tap-win64`
   * As administrator run `addtap.bat`
+3. Rename generated network adapter to the name of the network (`dnet` by-default)
+
+
+Usage:
+
+1. Launch command line As administrator
+2. Navigate to the directory with `tinc-boot.exe`
+3. With black-magic, `tinc-boot.exe /help` command and instructions for normal OS (*Nix) generate config  
