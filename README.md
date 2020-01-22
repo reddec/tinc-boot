@@ -156,6 +156,13 @@ and follow recommendations
 
 ![overview](https://user-images.githubusercontent.com/6597086/65752642-ca049d00-e13f-11e9-86ff-05134129eb86.png)
 
-# TODO
+# Windows
 
-* generate script with token to redistribute all-in-one to end-users
+Tested only for x64
+
+Requirements:
+
+* Tinc for Windows: [download on official site](https://www.tinc-vpn.org/)
+* **Install TAP driver**!:
+  * Go to `C:\Program Files(x86)\tinc\tap-win64`
+  * As administrator run `addtap.bat`
