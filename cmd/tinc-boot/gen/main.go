@@ -181,13 +181,7 @@ func (cmd *Cmd) Execute(args []string) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("DONE!")
-	fmt.Println("invoke command by root:")
-	fmt.Println("")
-	fmt.Println("     systemctl start tinc@" + cmd.Network)
-	fmt.Println("     systemctl enable tinc@" + cmd.Network)
-	fmt.Println("")
-	return nil
+	return cmd.sayGoodBye()
 }
 
 func (cmd *Cmd) boot() error {
