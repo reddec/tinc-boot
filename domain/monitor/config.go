@@ -1,10 +1,8 @@
 package monitor
 
 import (
-	"errors"
-	"net"
+	cmd2 "github.com/reddec/tinc-boot/cmd"
 	"path/filepath"
-	"strconv"
 	"time"
 )
 
@@ -27,24 +25,8 @@ func (cfg *Config) Root() string {
 	}
 	return r
 }
-func (cfg *Config) Hosts() string    { return filepath.Join(cfg.Root(), "hosts") }
-func (cfg *Config) HostFile() string { return filepath.Join(cfg.Hosts(), cfg.Name) }
-func (cfg *Config) TincConf() string { return filepath.Join(cfg.Root(), "tinc.conf") }
-func (cfg *Config) Network() string  { return filepath.Base(cfg.Root()) }
-
-func (cfg *Config) Binding() (string, error) {
-	ief, err := net.InterfaceByName(cfg.Iface)
-	if err != nil {
-		return "", err
-	}
-	addrs, err := ief.Addrs()
-	if err != nil {
-		return "", err
-	}
-	for _, addr := range addrs {
-		if v, ok := addr.(*net.IPNet); ok && v.IP.IsGlobalUnicast() {
-			return v.IP.String() + ":" + strconv.Itoa(cfg.Port), nil
-		}
-	}
-	return "127.0.0.1:0", errors.New("unable to detect binding address")
-}
+func (cfg *Config) Hosts() string            { return filepath.Join(cfg.Root(), "hosts") }
+func (cfg *Config) HostFile() string         { return filepath.Join(cfg.Hosts(), cfg.Name) }
+func (cfg *Config) TincConf() string         { return filepath.Join(cfg.Root(), "tinc.conf") }
+func (cfg *Config) Network() string          { return filepath.Base(cfg.Root()) }
+func (cfg *Config) Binding() (string, error) { return cmd2.BindingByName(cfg.Iface, cfg.Port) }

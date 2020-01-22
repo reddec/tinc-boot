@@ -2,8 +2,11 @@ package cmd
 
 import (
 	"context"
+	"errors"
+	"net"
 	"os"
 	"os/signal"
+	"strconv"
 )
 
 func SignalContext(parent context.Context) context.Context {
@@ -21,4 +24,21 @@ func SignalContext(parent context.Context) context.Context {
 		}
 	}()
 	return ctx
+}
+
+func BindingByName(iface string, port int) (string, error) {
+	ief, err := net.InterfaceByName(iface)
+	if err != nil {
+		return "", err
+	}
+	addrs, err := ief.Addrs()
+	if err != nil {
+		return "", err
+	}
+	for _, addr := range addrs {
+		if v, ok := addr.(*net.IPNet); ok && v.IP.IsGlobalUnicast() {
+			return v.IP.String() + ":" + strconv.Itoa(port), nil
+		}
+	}
+	return "127.0.0.1:0", errors.New("unable to detect binding address")
 }

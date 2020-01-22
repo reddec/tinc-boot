@@ -2,10 +2,9 @@ package kill
 
 import (
 	"errors"
+	cmd2 "github.com/reddec/tinc-boot/cmd"
 	"io"
-	"net"
 	"net/http"
-	"strconv"
 )
 
 type Cmd struct {
@@ -34,13 +33,5 @@ func (cmd *Cmd) Execute(args []string) error {
 }
 
 func (cmd *Cmd) binding() (string, error) {
-	ief, err := net.InterfaceByName(cmd.Iface)
-	if err != nil {
-		return "", err
-	}
-	addrs, err := ief.Addrs()
-	if err != nil {
-		return "", err
-	}
-	return addrs[0].(*net.IPNet).IP.String() + ":" + strconv.Itoa(cmd.Port), nil
+	return cmd2.BindingByName(cmd.Iface, cmd.Port)
 }
