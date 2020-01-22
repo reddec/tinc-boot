@@ -10,6 +10,7 @@ const Extension = ".bat"
 
 var TincUp = template.Must(template.New("").Parse(`
 netsh interface ipv4 set address name="%INTERFACE%" static {{.Addr}} {{.MaskAsAddr}} store=persistent
+cd "%~dp0r"
 start /B "" "{{.Bin}}" monitor
 `))
 
