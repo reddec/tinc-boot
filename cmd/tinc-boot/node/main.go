@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/reddec/tinc-boot/cmd/tinc-boot/node/internal"
 	"github.com/reddec/tinc-boot/types"
 	"golang.org/x/crypto/chacha20poly1305"
 	"io"
@@ -23,11 +24,10 @@ import (
 const serviceFile = "/etc/systemd/system/tinc-boot"
 
 type Cmd struct {
+	internal.Platform
 	Name    string `long:"name" env:"NAME" description:"Self node name"`
-	Dir     string `long:"dir" env:"DIR" description:"Configuration directory (including net)" default:"/etc/tinc/dnet"`
 	Binding string `long:"binding" env:"BINDING" description:"Public binding address" default:":8655"`
 	Token   string `long:"token" env:"TOKEN" description:"Authorization token (used as a encryption key)"`
-	Service bool   `long:"service" env:"SERVICE" description:"Generate service file to /etc/systemd/system/tinc-boot-{net}.service"`
 	TLSKey  string `long:"tls-key" env:"TLS_KEY" description:"Path to private TLS key"`
 	TLSCert string `long:"tls-cert" env:"TLS_CERT" description:"Path to public TLS certificate"`
 }
