@@ -82,6 +82,10 @@ echo "deb https://dl.bintray.com/reddec/debian {distribution} main" | sudo tee -
 sudo apt install tinc-boot
 ```
 
+### Independent maintainers
+
+* **Arch Linux** in AUR [package `tinc-boot-git`](https://aur.archlinux.org/packages/tinc-boot-git/): `yaourt -S tinc-boot-git`
+
 ### Support
 
 * [Community Discord](https://discord.gg/eBzNeC9)
