@@ -3,6 +3,7 @@
 [![license](https://img.shields.io/github/license/reddec/tinc-boot.svg)](https://github.com/reddec/tinc-boot)
 [![](https://godoc.org/github.com/reddec/tinc-boot?status.svg)](http://godoc.org/github.com/reddec/tinc-boot)
 [![donate](https://img.shields.io/badge/help_by️-donate❤-ff69b4)](http://reddec.net/about/#donate)
+[![Download](https://api.bintray.com/packages/reddec/debian/tinc-boot/images/download.svg)](https://bintray.com/reddec/debian/tinc-boot/_latestVersion)
 
 Idea to create a easy-to-use wrapper over [tinc vpn](https://www.tinc-vpn.org).
 
