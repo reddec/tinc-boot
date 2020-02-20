@@ -2,6 +2,7 @@ package monitor
 
 import (
 	cmd2 "github.com/reddec/tinc-boot/cmd"
+	"os"
 	"path/filepath"
 	"time"
 )
@@ -19,7 +20,13 @@ type Config struct {
 
 func (cfg *Config) Events() *monitorEvents { return &cfg.events }
 func (cfg *Config) Root() string {
-	r, err := filepath.Abs(cfg.Dir)
+	var dir = cfg.Dir
+	if cfg.Dir == "." {
+		if d, err := os.Getwd(); err == nil {
+			dir = d
+		}
+	}
+	r, err := filepath.Abs(dir)
 	if err != nil {
 		panic(err)
 	}

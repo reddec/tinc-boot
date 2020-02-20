@@ -115,6 +115,7 @@ func (ms *service) Address() string { return ms.address }
 func (ms *service) reindexLoop() {
 	reindexTimer := time.NewTicker(ms.cfg.Reindex)
 	defer reindexTimer.Stop()
+	ms.askForIndex()
 	for {
 		select {
 		case <-ms.globalContext.Done():
