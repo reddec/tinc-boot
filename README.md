@@ -81,6 +81,11 @@ echo "deb https://dl.bintray.com/reddec/debian {distribution} main" | sudo tee -
 sudo apt install tinc-boot
 ```
 
+### Support
+
+* [Community Discord](https://discord.gg/eBzNeC9)
+* [Contact me](https://reddec.net/about/)
+
 ### Build requirements
 
 * go 1.13+
