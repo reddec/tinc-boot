@@ -67,7 +67,7 @@ Donating always welcome
 
 ## Installation
 
-* (recommended) look at  [releases](https://github.com/reddec/tinc_boot/releases) page and download
+* (recommended) look at  [releases](https://github.com/reddec/tinc-boot/releases) page and download
 * one line shell command:
 ```
 curl -L https://github.com/reddec/tinc-boot/releases/latest/download/tinc-boot_linux_amd64.tar.gz | sudo tar -xz -C /usr/local/bin/ tinc-boot
