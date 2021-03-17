@@ -2,14 +2,17 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/jessevdk/go-flags"
+
 	"github.com/reddec/tinc-boot/cmd/tinc-boot/forget"
 	"github.com/reddec/tinc-boot/cmd/tinc-boot/gen"
 	"github.com/reddec/tinc-boot/cmd/tinc-boot/kill"
 	"github.com/reddec/tinc-boot/cmd/tinc-boot/monitor"
 	"github.com/reddec/tinc-boot/cmd/tinc-boot/node"
+	"github.com/reddec/tinc-boot/cmd/tinc-boot/run"
 	"github.com/reddec/tinc-boot/cmd/tinc-boot/watch"
-	"os"
 )
 
 var (
@@ -24,6 +27,7 @@ type Config struct {
 	Watch   watch.Cmd   `command:"watch" description:"Add new subnet to watch daemon to get it host file (subnet-up)"`
 	Forget  forget.Cmd  `command:"forget" description:"Forget subnet and stop watching it (subnet-down)"`
 	Kill    kill.Cmd    `command:"kill" description:"Kill monitor daemon (tinc-down)"`
+	Run     run.Cmd     `command:"run" description:"Run tincd daemon in managed way"`
 }
 
 func main() {
