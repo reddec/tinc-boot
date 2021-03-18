@@ -43,6 +43,27 @@ func (dm *Config) Events() *Events {
 	return &dm.events
 }
 
+// Location of hosts definitions files.
+func (dm *Config) HostsDir() string {
+	return filepath.Join(dm.ConfigDir, "hosts")
+}
+
+// Configured daemon or not.
+func (dm *Config) Configured() bool {
+	main, node, err := config.ReadNodeConfig(dm.ConfigDir)
+	if err != nil {
+		return false
+	}
+	if main.Interface == "" {
+		return false
+	}
+	ip := strings.TrimSpace(strings.Split(node.Subnet, "/")[0])
+	if ip == "" {
+		return false
+	}
+	return true
+}
+
 // Create new named daemon but not start. Name just for logs.
 // To prevent go-routing leaks caller must call Stop() to cleanup resources.
 func (dm *Config) Spawn(ctx context.Context) (*Daemon, error) {
@@ -61,6 +82,8 @@ func (dm *Config) Spawn(ctx context.Context) (*Daemon, error) {
 	child, cancel := context.WithCancel(ctx)
 	d := &Daemon{
 		name:       main.Name,
+		main:       main,
+		self:       node,
 		config:     dm,
 		cancel:     cancel,
 		done:       make(chan struct{}),
@@ -70,6 +93,9 @@ func (dm *Config) Spawn(ctx context.Context) (*Daemon, error) {
 	}
 	d.events.SubnetAdded.handlers = append(d.events.SubnetAdded.handlers, dm.events.SubnetAdded.handlers...)
 	d.events.SubnetRemoved.handlers = append(d.events.SubnetRemoved.handlers, dm.events.SubnetRemoved.handlers...)
+	d.events.Ready.handlers = append(d.events.Ready.handlers, dm.events.Ready.handlers...)
+	d.events.Stopped.handlers = append(d.events.Stopped.handlers, dm.events.Stopped.handlers...)
+	d.events.Configured.handlers = append(d.events.Configured.handlers, dm.events.Configured.handlers...)
 	go d.runLoop(child)
 	return d, nil
 }
@@ -102,6 +128,8 @@ const (
 type Daemon struct {
 	name       string
 	config     *Config
+	self       *config.Node
+	main       *config.Main
 	ip         string
 	deviceName string
 	cancel     func()
@@ -129,6 +157,16 @@ func (dm *Daemon) Done() <-chan struct{} {
 // Config used for daemon creation. Read-only.
 func (dm *Daemon) Config() *Config {
 	return dm.config
+}
+
+// Self node config.
+func (dm *Daemon) Self() config.Node {
+	return *dm.self
+}
+
+// Main tinc config.
+func (dm *Daemon) Main() config.Main {
+	return *dm.main
 }
 
 // Name of daemon same as provided during creation.
@@ -166,8 +204,6 @@ func (dm *Daemon) run(ctx context.Context) error {
 	cmd.Stderr = writer
 	utils.SetCmdAttrs(cmd)
 
-	dm.setStatus(StatusRunning)
-
 	var wg sync.WaitGroup
 
 	wg.Add(1)
@@ -179,9 +215,17 @@ func (dm *Daemon) run(ctx context.Context) error {
 	defer wg.Wait()
 	defer writer.Close()
 
+	defer dm.events.Stopped.emit(Configuration{
+		IP:        dm.ip,
+		Interface: dm.deviceName,
+		Self:      *dm.self,
+		Main:      *dm.main,
+	})
+
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("run service: %w", err)
 	}
+
 	return nil
 }
 
@@ -189,7 +233,6 @@ func (dm *Daemon) scanner(stream io.Reader) {
 	reader := bufio.NewScanner(stream)
 	for reader.Scan() {
 		line := reader.Text()
-		log.Println("daemon", dm.name, line)
 		if event := IsSubnetAdded(line); event != nil {
 			dm.events.SubnetAdded.emit(*event)
 		} else if event := IsSubnetRemoved(line); event != nil {
@@ -199,11 +242,14 @@ func (dm *Daemon) scanner(stream io.Reader) {
 			if err := dm.setupNetwork(); err != nil {
 				log.Println("daemon", dm.name, "setup network:", err)
 			} else {
-				dm.events.Configured.emit(EventConfigured{
+				dm.events.Configured.emit(Configuration{
 					IP:        dm.ip,
 					Interface: dm.deviceName,
+					Self:      *dm.self,
+					Main:      *dm.main,
 				})
 			}
+			dm.setStatus(StatusRunning)
 		}
 	}
 	if reader.Err() != nil {
@@ -222,7 +268,10 @@ func (dm *Daemon) setupNetwork() error {
 }
 
 // event:"Configured"
-type EventConfigured struct {
+// event:"Stopped"
+type Configuration struct {
 	IP        string
 	Interface string
+	Self      config.Node
+	Main      config.Main
 }

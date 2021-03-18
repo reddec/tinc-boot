@@ -2,6 +2,42 @@ package daemon
 
 import "sync"
 
+type Configured struct {
+	lock     sync.RWMutex
+	handlers []func(Configuration)
+}
+
+func (ev *Configured) Subscribe(handler func(Configuration)) {
+	ev.lock.Lock()
+	ev.handlers = append(ev.handlers, handler)
+	ev.lock.Unlock()
+}
+func (ev *Configured) emit(payload Configuration) {
+	ev.lock.RLock()
+	for _, handler := range ev.handlers {
+		handler(payload)
+	}
+	ev.lock.RUnlock()
+}
+
+type Stopped struct {
+	lock     sync.RWMutex
+	handlers []func(Configuration)
+}
+
+func (ev *Stopped) Subscribe(handler func(Configuration)) {
+	ev.lock.Lock()
+	ev.handlers = append(ev.handlers, handler)
+	ev.lock.Unlock()
+}
+func (ev *Stopped) emit(payload Configuration) {
+	ev.lock.RLock()
+	for _, handler := range ev.handlers {
+		handler(payload)
+	}
+	ev.lock.RUnlock()
+}
+
 type SubnetAdded struct {
 	lock     sync.RWMutex
 	handlers []func(EventSubnetAdded)
@@ -57,39 +93,24 @@ func (ev *Ready) emit() {
 	ev.lock.RUnlock()
 }
 
-type Configured struct {
-	lock     sync.RWMutex
-	handlers []func(EventConfigured)
-}
-
-func (ev *Configured) Subscribe(handler func(EventConfigured)) {
-	ev.lock.Lock()
-	ev.handlers = append(ev.handlers, handler)
-	ev.lock.Unlock()
-}
-func (ev *Configured) emit(payload EventConfigured) {
-	ev.lock.RLock()
-	for _, handler := range ev.handlers {
-		handler(payload)
-	}
-	ev.lock.RUnlock()
-}
-
 type Events struct {
+	Configured    Configured
+	Stopped       Stopped
 	SubnetAdded   SubnetAdded
 	SubnetRemoved SubnetRemoved
 	Ready         Ready
-	Configured    Configured
 }
 
 func (bus *Events) SubscribeAll(listener interface {
+	Configured(payload Configuration)
+	Stopped(payload Configuration)
 	SubnetAdded(payload EventSubnetAdded)
 	SubnetRemoved(payload EventSubnetRemoved)
 	Ready(payload EventReady)
-	Configured(payload EventConfigured)
 }) {
+	bus.Configured.Subscribe(listener.Configured)
+	bus.Stopped.Subscribe(listener.Stopped)
 	bus.SubnetAdded.Subscribe(listener.SubnetAdded)
 	bus.SubnetRemoved.Subscribe(listener.SubnetRemoved)
 	bus.Ready.Subscribe(listener.Ready)
-	bus.Configured.Subscribe(listener.Configured)
 }
