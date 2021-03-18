@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/reddec/tinc-boot/tincd/config"
@@ -90,25 +91,26 @@ func (cmd *Cmd) Execute([]string) error {
 	}
 
 	daemonConfig := daemon.Default(cmd.configDir())
-	daemonConfig.WorkDir = cmd.workDir()
+	daemonConfig.PidFile = filepath.Join(cmd.workDir(), "pid.run")
 
-	var main = mainConfig{
+	var main = config.Main{
 		Name:           cmd.name(),
 		Port:           cmd.port(),
 		LocalDiscovery: true,
+		Interface:      "tun" + strings.ToUpper(utils.RandStringRunes(5)),
 	}
-	if err := SaveFile(cmd.tincFile(), main); err != nil {
+	if err := config.SaveFile(cmd.tincFile(), main); err != nil {
 		return fmt.Errorf("create tinc.conf file: %w", err)
 	}
 
 	nodeFile := filepath.Join(cmd.hostsDir(), main.Name)
 
-	var node = nodeConfig{
+	var node = config.Node{
 		Subnet:  cmd.ip() + "/32",
 		Address: cmd.advertise(),
 		Port:    main.Port,
 	}
-	if err := SaveFile(nodeFile, node); err != nil {
+	if err := config.SaveFile(nodeFile, node); err != nil {
 		return fmt.Errorf("create node file: %w", err)
 	}
 
@@ -119,35 +121,14 @@ func (cmd *Cmd) Execute([]string) error {
 		return fmt.Errorf("generate keys: %w", err)
 	}
 
-	return nil
-}
-
-type mainConfig struct {
-	Name           string
-	Port           uint16
-	LocalDiscovery bool
-}
-
-type nodeConfig struct {
-	Subnet    string
-	Address   []string
-	Port      uint16
-	PublicKey string `tinc:"RSA PUBLIC KEY"`
-}
-
-func SaveFile(file string, content interface{}) error {
-	f, err := os.Create(file)
+	instance, err := daemonConfig.Spawn(ctx)
 	if err != nil {
-		return fmt.Errorf("create config file: %w", err)
+		return fmt.Errorf("spawn daemon: %w", err)
 	}
-	err = config.MarshalStream(f, content)
-	if err != nil {
-		return fmt.Errorf("marshal config: %w", err)
-	}
-	err = f.Close()
-	if err != nil {
-		return fmt.Errorf("close config file: %w", err)
-	}
+	defer instance.Stop()
+
+	<-instance.Done()
+
 	return nil
 }
 

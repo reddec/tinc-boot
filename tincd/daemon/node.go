@@ -1,15 +1,19 @@
 package daemon
 
 import (
+	"bufio"
 	"context"
 	"fmt"
+	"io"
 	"log"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
+	"github.com/reddec/tinc-boot/tincd/config"
 	"github.com/reddec/tinc-boot/tincd/daemon/utils"
 )
 
@@ -18,7 +22,7 @@ func Default(configDir string) *Config {
 	return &Config{
 		Binary:          "tincd",
 		ConfigDir:       configDir,
-		WorkDir:         filepath.Dir(configDir),
+		PidFile:         filepath.Join(configDir, "pid.run"),
 		RestartInterval: 5 * time.Second,
 	}
 }
@@ -27,7 +31,7 @@ func Default(configDir string) *Config {
 type Config struct {
 	Binary          string   // tincd binary
 	Args            []string // additional tincd arguments
-	WorkDir         string   // daemon working directory
+	PidFile         string
 	ConfigDir       string
 	RestartInterval time.Duration // interval between restart
 
@@ -41,19 +45,33 @@ func (dm *Config) Events() *Events {
 
 // Create new named daemon but not start. Name just for logs.
 // To prevent go-routing leaks caller must call Stop() to cleanup resources.
-func (dm *Config) Spawn(ctx context.Context, name string) *Daemon {
+func (dm *Config) Spawn(ctx context.Context) (*Daemon, error) {
+	main, node, err := config.ReadNodeConfig(dm.ConfigDir)
+	if err != nil {
+		return nil, fmt.Errorf("read daemon config: %w", err)
+	}
+	if main.Interface == "" {
+		return nil, fmt.Errorf("device name not defined in main config")
+	}
+	ip := strings.TrimSpace(strings.Split(node.Subnet, "/")[0])
+	if ip == "" {
+		return nil, fmt.Errorf("subnet not defined in node config")
+	}
+
 	child, cancel := context.WithCancel(ctx)
 	d := &Daemon{
-		name:   name,
-		config: dm,
-		cancel: cancel,
-		done:   make(chan struct{}),
-		status: StatusInit,
+		name:       main.Name,
+		config:     dm,
+		cancel:     cancel,
+		done:       make(chan struct{}),
+		status:     StatusInit,
+		ip:         ip,
+		deviceName: main.Interface,
 	}
 	d.events.SubnetAdded.handlers = append(d.events.SubnetAdded.handlers, dm.events.SubnetAdded.handlers...)
 	d.events.SubnetRemoved.handlers = append(d.events.SubnetRemoved.handlers, dm.events.SubnetRemoved.handlers...)
 	go d.runLoop(child)
-	return d
+	return d, nil
 }
 
 // Keygen runs tincd executable with -K flag to generate keys.
@@ -62,7 +80,7 @@ func (dm *Config) Keygen(ctx context.Context, bits int) error {
 }
 
 func (dm *Config) args(extra ...string) []string {
-	var result = []string{"-D", "-d", "-d", "-d", "-d", "--pidfile", "pid.run", "-c", dm.ConfigDir}
+	var result = []string{"-D", "-d", "-d", "-d", "-d", "--pidfile", dm.PidFile, "-c", dm.ConfigDir}
 	result = append(result, extra...)
 	result = append(result, dm.Args...)
 	return result
@@ -82,12 +100,14 @@ const (
 // It's impossible to restart same daemon again. To recreate daemon with exactly same parameters use:
 // daemon.Config().Spawn(ctx, daemon.Name()).
 type Daemon struct {
-	name   string
-	config *Config
-	cancel func()
-	status Status
-	done   chan struct{}
-	events Events
+	name       string
+	config     *Config
+	ip         string
+	deviceName string
+	cancel     func()
+	status     Status
+	done       chan struct{}
+	events     Events
 }
 
 // Events from daemon.
@@ -140,18 +160,69 @@ func (dm *Daemon) runLoop(ctx context.Context) {
 }
 
 func (dm *Daemon) run(ctx context.Context) error {
-	if err := os.MkdirAll(dm.config.WorkDir, 0655); err != nil {
-		return fmt.Errorf("create working directory: %w", err)
-	}
-
+	reader, writer := io.Pipe()
 	cmd := exec.CommandContext(ctx, dm.config.Binary, dm.config.args()...)
-	cmd.Dir = dm.config.WorkDir
+	cmd.Stdout = writer
+	cmd.Stderr = writer
 	utils.SetCmdAttrs(cmd)
 
 	dm.setStatus(StatusRunning)
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		dm.scanner(reader)
+	}()
+
+	defer wg.Wait()
+	defer writer.Close()
 
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("run service: %w", err)
 	}
 	return nil
+}
+
+func (dm *Daemon) scanner(stream io.Reader) {
+	reader := bufio.NewScanner(stream)
+	for reader.Scan() {
+		line := reader.Text()
+		log.Println("daemon", dm.name, line)
+		if event := IsSubnetAdded(line); event != nil {
+			dm.events.SubnetAdded.emit(*event)
+		} else if event := IsSubnetRemoved(line); event != nil {
+			dm.events.SubnetRemoved.emit(*event)
+		} else if event := IsReady(line); event != nil {
+			dm.events.Ready.emit()
+			if err := dm.setupNetwork(); err != nil {
+				log.Println("daemon", dm.name, "setup network:", err)
+			} else {
+				dm.events.Configured.emit(EventConfigured{
+					IP:        dm.ip,
+					Interface: dm.deviceName,
+				})
+			}
+		}
+	}
+	if reader.Err() != nil {
+		log.Println("daemon", dm.name, "read daemon output:", reader.Err())
+	}
+}
+
+func (dm *Daemon) setupNetwork() error {
+	if err := setAddress(dm.deviceName, dm.ip); err != nil {
+		return fmt.Errorf("set address: %w", err)
+	}
+	if err := enableInterface(dm.deviceName); err != nil {
+		return fmt.Errorf("bring interface up: %w", err)
+	}
+	return nil
+}
+
+// event:"Configured"
+type EventConfigured struct {
+	IP        string
+	Interface string
 }

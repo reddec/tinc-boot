@@ -96,7 +96,7 @@ func marshalType(out *bufio.Writer, info fieldInfo, value reflect.Value, nested 
 		if value.Bool() {
 			strValue = "yes"
 		}
-		_, err := out.WriteString(info.Name + " = " + strValue)
+		_, err := out.WriteString(info.Name + " = " + strValue + "\n")
 		return err
 	default:
 		if !info.Blob {
