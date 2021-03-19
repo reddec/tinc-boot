@@ -28,16 +28,18 @@ type SSD struct {
 	lock     sync.RWMutex
 	entities map[string]Entity
 	file     string
+	fileLock sync.Mutex
+}
+
+func (ssd *SSD) unsafeIsNewer(name string, desired int64) bool {
+	old, exists := ssd.entities[name]
+	return !exists || desired > old.Version
 }
 
 func (ssd *SSD) CanBeMerged(entity Entity) bool {
 	ssd.lock.RLock()
 	defer ssd.lock.RUnlock()
-	old, hasOld := ssd.entities[entity.Name]
-	if !hasOld || old.Version <= entity.Version {
-		return false
-	}
-	return true
+	return ssd.unsafeIsNewer(entity.Name, entity.Version)
 }
 
 func (ssd *SSD) ReplaceIfNewer(entity Entity, block func() bool) bool {
@@ -46,8 +48,7 @@ func (ssd *SSD) ReplaceIfNewer(entity Entity, block func() bool) bool {
 	if ssd.entities == nil {
 		ssd.entities = make(map[string]Entity)
 	}
-	old, hasOld := ssd.entities[entity.Name]
-	if hasOld && old.Version <= entity.Version {
+	if !ssd.unsafeIsNewer(entity.Name, entity.Version) {
 		return false
 	}
 	if block != nil && !block() {
@@ -66,7 +67,7 @@ func (ssd *SSD) Replace(entity Entity) {
 	ssd.entities[entity.Name] = entity
 }
 
-func (ssd *SSD) GetIfNewer(name string, version int64) (Entity, bool) {
+func (ssd *SSD) GetAfter(name string, version int64) (Entity, bool) {
 	ssd.lock.RLock()
 	defer ssd.lock.RUnlock()
 	old, hasOld := ssd.entities[name]
@@ -158,10 +159,14 @@ func (ssd *SSD) ReadFile(filename string) error {
 }
 
 func (ssd *SSD) Read() error {
+	ssd.fileLock.Lock()
+	defer ssd.fileLock.Unlock()
 	return ssd.ReadFile(ssd.file)
 }
 
 func (ssd *SSD) Save() error {
+	ssd.fileLock.Lock()
+	defer ssd.fileLock.Unlock()
 	return ssd.SaveFile(ssd.file)
 }
 

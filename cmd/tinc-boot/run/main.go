@@ -157,8 +157,7 @@ func (cmd *Cmd) Execute([]string) error {
 	}
 	for _, host := range hosts {
 		ssd.ReplaceIfNewer(discovery.Entity{
-			Name:    host,
-			Version: 0,
+			Name: host,
 		}, nil)
 	}
 
@@ -243,7 +242,9 @@ func (cmd *Cmd) Execute([]string) error {
 			}, nil) {
 				log.Println("got new node", name, "from", url)
 			}
-			_ = ssd.Save()
+			if err := ssd.Save(); err != nil {
+				log.Println("failed save discovery metadata after exchange:", err)
+			}
 		}
 		greetClients.Add(1)
 		go func(client *boot.Client) {
@@ -260,7 +261,9 @@ func (cmd *Cmd) Execute([]string) error {
 			Name:    info.Name,
 			Version: 0,
 		}, nil)
-		_ = ssd.Save()
+		if err := ssd.Save(); err != nil {
+			log.Println("failed save discovery metadata:", err)
+		}
 	}
 
 	greetServer := &http.Server{

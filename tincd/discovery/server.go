@@ -46,7 +46,7 @@ func (srv *server) getOne(writer http.ResponseWriter, request *http.Request) {
 
 	log.Println("asking for", name, "after", version)
 
-	info, ok := srv.ssd.GetIfNewer(name, version)
+	info, ok := srv.ssd.GetAfter(name, version)
 	if !ok {
 		http.NotFound(writer, request)
 		return
