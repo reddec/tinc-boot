@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"net"
+	"net/http"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/reddec/tinc-boot/tincd/boot"
 	"github.com/reddec/tinc-boot/tincd/config"
 	"github.com/reddec/tinc-boot/tincd/daemon"
 	"github.com/reddec/tinc-boot/tincd/daemon/utils"
@@ -22,11 +24,16 @@ import (
 )
 
 type Cmd struct {
-	Name              string        `short:"n" long:"name" env:"NAME" description:"Node name. If not set - saved or hostname with random suffix will be used"`
-	Advertise         []string      `short:"a" long:"advertise" env:"ADVERTISE" description:"Routable IPs/domains with or without port that will be advertised for new clients. If not set - saved or all non-loopback IPs will be used"`
-	Port              uint16        `short:"p" long:"port" env:"PORT" description:"Tinc listen port for fresh node. If not set - saved or random will be generated in 30000-40000 range"`
+	Name              string        `short:"n" long:"name" env:"NAME" description:"Node name. If not set - hostname with random suffix will be used"`
+	Advertise         []string      `short:"a" long:"advertise" env:"ADVERTISE" description:"Routable IPs/domains with or without port that will be advertised for new clients. If not set - all non-loopback IPs will be used"`
+	TincPort          uint16        `long:"tinc-port" env:"TINC_PORT" description:"Tinc listen port for fresh node. If not set - random will be generated in 30000-40000 range"`
 	Device            string        `long:"device" env:"DEVICE" description:"Device name. If not defined - will use last 5 symbols of resolved name"`
-	IP                string        `long:"ip" env:"IP" description:"VPN IP for fresh node. If not set - saved or random will be generated once in 172.0.0.0/8"`
+	Bind              string        `short:"b" long:"bind" env:"BIND" description:"Greeting protocol HTTP binding" default:":8655"`
+	Token             string        `long:"token" env:"TOKEN" description:"Boot token. If not defined - random string will be generated and printed"`
+	TLS               bool          `long:"tls" env:"TLS" description:"Enable TLS for greeting protocol"`
+	Cert              string        `long:"cert" env:"CERT" description:"TLS certificate" default:"server.crt"`
+	Key               string        `long:"key" env:"KEY" description:"TLS key" default:"server.key"`
+	IP                string        `long:"ip" env:"IP" description:"VPN IP for fresh node. If not set - random will be generated once in 172.0.0.0/8"`
 	Dir               string        `short:"d" long:"dir" env:"DIR" description:"tinc-boot directory. Will be created if not exists" default:"vpn"`
 	Tincd             string        `long:"tincd" env:"TINCD" description:"tincd binary location" default:"tincd"`
 	DiscoveryInterval time.Duration `long:"discovery-interval" env:"DISCOVERY_INTERVAL" description:"Interval between discovery" default:"5s"`
@@ -76,9 +83,9 @@ func (cmd Cmd) advertise() []string {
 	return ips
 }
 
-func (cmd Cmd) port() uint16 {
-	if cmd.Port != 0 {
-		return cmd.Port
+func (cmd Cmd) tincPort() uint16 {
+	if cmd.TincPort != 0 {
+		return cmd.TincPort
 
 	}
 	return uint16(30000 + rand.Intn(10000))
@@ -130,18 +137,33 @@ func (cmd *Cmd) Execute([]string) error {
 		return fmt.Errorf("count clock tick: %w", err)
 	}
 
+	daemonConfig := daemon.Default(cmd.configDir())
+	daemonConfig.PidFile = filepath.Join(cmd.workDir(), "pid.run")
+
 	ssd := discovery.NewSSD(cmd.ssdFile())
 
 	if err := ssd.Read(); err != nil {
 		return fmt.Errorf("read discovery: %w", err)
 	}
 
+	// restore SSD config if we missed something by scanning hosts
+	hosts, err := ioutil.ReadDir(daemonConfig.HostsDir())
+	if err != nil {
+		return fmt.Errorf("read hosts: %w", err)
+	}
+	for _, host := range hosts {
+		if !host.IsDir() && types.CleanString(host.Name()) == host.Name() {
+			ssd.ReplaceIfNewer(discovery.Entity{
+				Name:    host.Name(),
+				Version: 0,
+			}, nil)
+		}
+	}
+
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt)
 	defer cancel()
 
-	daemonConfig := daemon.Default(cmd.configDir())
-	daemonConfig.PidFile = filepath.Join(cmd.workDir(), "pid.run")
-
+	// configure daemon if needed
 	if !daemonConfig.Configured() {
 		log.Println("configuration not exists or invalid - creating a new one")
 		err := cmd.createConfig(ctx, daemonConfig)
@@ -157,6 +179,7 @@ func (cmd *Cmd) Execute([]string) error {
 		return fmt.Errorf("read generated config: %w", err)
 	}
 
+	// add to discovery information about self node
 	ssd.Replace(discovery.Entity{
 		Name:    main.Name,
 		Version: tick,
@@ -177,6 +200,55 @@ func (cmd *Cmd) Execute([]string) error {
 	}
 	defer instance.Stop()
 
+	// setup boot/greeting service
+
+	if cmd.Token == "" {
+		cmd.Token = utils.RandStringRunes(64)
+
+		var proto = "http"
+		if cmd.TLS {
+			proto = "https"
+		}
+		_, port, _ := net.SplitHostPort(cmd.Bind) // TODO: replace to listener Listen and get real port
+		fmt.Println("Use on of this command to join the network")
+		fmt.Println()
+		for _, address := range cmd.advertise() {
+			fmt.Println(os.Args[0], "run -t", cmd.Token, "--join", proto+"://"+address+":"+port)
+		}
+		fmt.Println()
+	}
+	token := boot.Token(cmd.Token)
+
+	greetHandler := boot.NewServer(daemonConfig, token)
+	greetHandler.Joined = func(info boot.Envelope) {
+		// refresh discovery
+		ssd.ReplaceIfNewer(discovery.Entity{
+			Name:    info.Name,
+			Version: 0,
+		}, nil)
+		_ = ssd.Save()
+	}
+
+	greetServer := &http.Server{
+		Addr:    cmd.Bind,
+		Handler: greetHandler,
+	}
+
+	go func() {
+		<-ctx.Done()
+		_ = greetServer.Close()
+	}()
+
+	if cmd.TLS {
+		err = greetServer.ListenAndServeTLS(cmd.Cert, cmd.Key)
+	} else {
+		err = greetServer.ListenAndServe()
+	}
+	if err != nil {
+		log.Println(err)
+	}
+
+	cancel()
 	<-instance.Done()
 
 	return nil
@@ -185,7 +257,7 @@ func (cmd *Cmd) Execute([]string) error {
 func (cmd Cmd) createConfig(ctx context.Context, daemonConfig *daemon.Config) error {
 	var main = config.Main{
 		Name:           cmd.name(),
-		Port:           cmd.port(),
+		Port:           cmd.tincPort(),
 		LocalDiscovery: true,
 		Interface:      "tun" + strings.ToUpper(cmd.deviceName()),
 	}

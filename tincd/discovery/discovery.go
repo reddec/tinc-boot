@@ -52,8 +52,9 @@ func (ds *Discovery) Stopped(payload daemon.Configuration) {
 }
 
 func (ds *Discovery) SubnetAdded(payload daemon.EventSubnetAdded) {
-	log.Println("watching subnet", payload.Peer.Subnet)
-	ds.client.Watch(context.Background(), strings.Split(payload.Peer.Subnet, "/")[0]+":"+discoveryPort)
+	if ds.client.Watch(context.Background(), strings.Split(payload.Peer.Subnet, "/")[0]+":"+discoveryPort) {
+		log.Println("watching subnet", payload.Peer.Subnet)
+	}
 }
 
 func (ds *Discovery) SubnetRemoved(payload daemon.EventSubnetRemoved) {

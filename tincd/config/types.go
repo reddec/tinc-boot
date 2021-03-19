@@ -11,6 +11,7 @@ type Main struct {
 	Port           uint16
 	LocalDiscovery bool
 	Interface      string
+	ConnectTo      []string
 }
 
 type Node struct {

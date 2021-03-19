@@ -32,7 +32,7 @@ type Client struct {
 	interval   time.Duration
 }
 
-func (cl *Client) Watch(ctx context.Context, address string) {
+func (cl *Client) Watch(ctx context.Context, address string) bool {
 	cl.lock.Lock()
 	defer cl.lock.Unlock()
 	if cl.requesters == nil {
@@ -40,7 +40,7 @@ func (cl *Client) Watch(ctx context.Context, address string) {
 	}
 	_, hasOld := cl.requesters[address]
 	if hasOld {
-		return
+		return false
 	}
 
 	child, cancel := context.WithCancel(ctx)
@@ -54,6 +54,7 @@ func (cl *Client) Watch(ctx context.Context, address string) {
 	}
 	cl.requesters[address] = rq
 	go rq.runLoop(child, cl.interval)
+	return true
 }
 
 func (cl *Client) Forget(address string) {
