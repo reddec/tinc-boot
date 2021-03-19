@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"path/filepath"
 	"time"
 
 	"github.com/reddec/tinc-boot/tincd/daemon"
@@ -56,7 +55,7 @@ func (cl *Client) exchange(ctx context.Context) error {
 		return fmt.Errorf("get self node name: %w", err)
 	}
 
-	selfContent, err := ioutil.ReadFile(filepath.Join(cl.config.HostsDir(), name))
+	selfContent, err := cl.config.Host(name)
 	if err != nil {
 		return fmt.Errorf("read self hosts: %w", err)
 	}
@@ -110,8 +109,8 @@ func (cl *Client) exchange(ctx context.Context) error {
 			log.Println("malformed archive entry:", name)
 			continue
 		}
-		file := filepath.Join(cl.config.HostsDir(), name)
-		err = ioutil.WriteFile(file, content, 0755)
+
+		err = cl.config.AddHost(name, content)
 		if err != nil {
 			return fmt.Errorf("import host %s: %w", name, err)
 		}

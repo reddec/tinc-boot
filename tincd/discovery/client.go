@@ -7,8 +7,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -126,7 +124,7 @@ func (rq *requester) gatherInfo(ctx context.Context) error {
 		}
 		log.Println("discovered node", info.Name, "version", info.Version, "from", rq.address)
 		changed = changed || rq.ssd.ReplaceIfNewer(*info, func() bool {
-			err = os.WriteFile(filepath.Join(rq.config.HostsDir(), info.Name), content, 0755)
+			err = rq.config.AddHost(info.Name, content)
 			if err != nil {
 				log.Println("failed save file", info.Name, ":", err)
 				return false
@@ -138,7 +136,10 @@ func (rq *requester) gatherInfo(ctx context.Context) error {
 		return nil
 	}
 	err = rq.ssd.Save()
-	return fmt.Errorf("save meta data: %w", err)
+	if err != nil {
+		return fmt.Errorf("save meta data: %w", err)
+	}
+	return nil
 }
 
 func (rq *requester) fetchContent(global context.Context, entity Entity) ([]byte, *Entity, error) {
@@ -147,7 +148,7 @@ func (rq *requester) fetchContent(global context.Context, entity Entity) ([]byte
 	ctx, cancel := context.WithTimeout(global, timeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+rq.address+"/"+entity.Name, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+rq.address+"/host/"+entity.Name+"?after=-1", nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("create request: %w", err)
 	}
@@ -163,12 +164,15 @@ func (rq *requester) fetchContent(global context.Context, entity Entity) ([]byte
 	}
 
 	name := res.Header.Get("X-Name")
+	if name == "" {
+		return nil, nil, fmt.Errorf("empty name")
+	}
 	version, err := strconv.ParseInt(res.Header.Get("X-Version"), 10, 64)
 	if err != nil {
 		return nil, nil, fmt.Errorf("parse version: %w", err)
 	}
 
-	content, err := io.ReadAll(req.Body)
+	content, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, nil, fmt.Errorf("fetch content: %w", err)
 	}
@@ -186,7 +190,7 @@ func (rq *requester) fetchHeaders(global context.Context) ([]Entity, error) {
 	ctx, cancel := context.WithTimeout(global, timeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+rq.address+"/", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://"+rq.address+"/hosts", nil)
 	if err != nil {
 		return nil, fmt.Errorf("create request: %w", err)
 	}

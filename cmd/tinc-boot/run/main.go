@@ -151,17 +151,15 @@ func (cmd *Cmd) Execute([]string) error {
 	}
 
 	// restore SSD config if we missed something by scanning hosts
-	hosts, err := ioutil.ReadDir(daemonConfig.HostsDir())
+	hosts, err := daemonConfig.HostNames()
 	if err != nil {
 		return fmt.Errorf("read hosts: %w", err)
 	}
 	for _, host := range hosts {
-		if !host.IsDir() && types.CleanString(host.Name()) == host.Name() {
-			ssd.ReplaceIfNewer(discovery.Entity{
-				Name:    host.Name(),
-				Version: 0,
-			}, nil)
-		}
+		ssd.ReplaceIfNewer(discovery.Entity{
+			Name:    host,
+			Version: 0,
+		}, nil)
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt)
@@ -194,6 +192,12 @@ func (cmd *Cmd) Execute([]string) error {
 		log.Println("save discovery meta config (fallback to in-memory only):", err)
 	}
 
+	// re-index config
+	err = daemonConfig.IndexHosts()
+	if err != nil {
+		return fmt.Errorf("index hosts: %w", err)
+	}
+
 	discoveryService := discovery.New(ssd, daemonConfig, cmd.DiscoveryInterval)
 
 	daemonConfig.Events().SubscribeAll(discoveryService)
@@ -205,26 +209,29 @@ func (cmd *Cmd) Execute([]string) error {
 	defer instance.Stop()
 
 	// setup boot/greeting service
-
+	var generatedToken bool
 	if cmd.Token == "" {
 		cmd.Token = utils.RandStringRunes(64)
-
-		var proto = "http"
-		if cmd.TLS {
-			proto = "https"
-		}
-		port := fmt.Sprint(cmd.Port) // TODO: replace to listener Listen and get real port
-		var lines = []string{
-			"Use one of this commands to join the network",
-			"",
-		}
-		fmt.Println("Use one of this command to join the network")
-		fmt.Println()
-		for _, address := range cmd.advertise() {
-			lines = append(lines, os.Args[0]+" run -t "+cmd.Token+" --join "+proto+"://"+address+":"+port)
-		}
-		fmt.Println(strings.Join(lines, "\n"))
+		generatedToken = true
 	}
+	var proto = "http"
+	if cmd.TLS {
+		proto = "https"
+	}
+	port := fmt.Sprint(cmd.Port) // TODO: replace to listener Listen and get real port
+	var lines = []string{
+		"Use one of this commands to join the network",
+		"",
+	}
+	visibleToken := cmd.Token
+	if !generatedToken {
+		visibleToken = "<TOKEN>"
+	}
+	for _, address := range cmd.advertise() {
+		lines = append(lines, os.Args[0]+" run -t "+visibleToken+" --join "+proto+"://"+address+":"+port)
+	}
+	fmt.Println(strings.Join(lines, "\n"))
+
 	token := boot.Token(cmd.Token)
 	// setup greeting clients
 	var greetClients sync.WaitGroup

@@ -3,9 +3,7 @@ package boot
 import (
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"net/http"
-	"path/filepath"
 	"strconv"
 
 	"github.com/reddec/tinc-boot/tincd/daemon"
@@ -52,14 +50,13 @@ func (srv *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 		return
 	}
 
-	hostFile := filepath.Join(srv.config.HostsDir(), env.Name)
-	err = ioutil.WriteFile(hostFile, env.Config, 0755)
+	err = srv.config.AddHost(env.Name, env.Config)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	hosts, err := srv.scanHosts()
+	hosts, err := srv.config.Hosts()
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
@@ -78,29 +75,6 @@ func (srv *Server) ServeHTTP(writer http.ResponseWriter, request *http.Request) 
 	if callback := srv.Joined; callback != nil {
 		callback(env)
 	}
-}
-
-func (srv *Server) scanHosts() (map[string][]byte, error) {
-	hostsDir := srv.config.HostsDir()
-	items, err := ioutil.ReadDir(hostsDir)
-	if err != nil {
-		return nil, err
-	}
-	var ans = make(map[string][]byte, len(items))
-
-	for _, item := range items {
-		name := item.Name()
-		if item.IsDir() || types.CleanString(name) != name {
-			continue
-		}
-
-		data, err := ioutil.ReadFile(filepath.Join(hostsDir, name))
-		if err != nil {
-			return nil, err
-		}
-		ans[name] = data
-	}
-	return ans, nil
 }
 
 type Envelope struct {

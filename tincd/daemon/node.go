@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os/exec"
 	"path/filepath"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/reddec/tinc-boot/tincd/config"
 	"github.com/reddec/tinc-boot/tincd/daemon/utils"
+	"github.com/reddec/tinc-boot/types"
 )
 
 // Default tinc daemon configuration.
@@ -35,7 +37,8 @@ type Config struct {
 	ConfigDir       string
 	RestartInterval time.Duration // interval between restart
 
-	events Events // base events emitter that will be propagated to spawned daemons
+	configLock sync.RWMutex
+	events     Events // base events emitter that will be propagated to spawned daemons
 }
 
 // Events listeners which will be propagated to spawned daemons.
@@ -110,6 +113,114 @@ func (dm *Config) Spawn(ctx context.Context) (*Daemon, error) {
 // Keygen runs tincd executable with -K flag to generate keys.
 func (dm *Config) Keygen(ctx context.Context, bits int) error {
 	return exec.CommandContext(ctx, dm.Binary, dm.args("-K", strconv.Itoa(bits))...).Run()
+}
+
+// Hosts names only. Go-routine safe.
+func (dm *Config) HostNames() ([]string, error) {
+	dm.configLock.RLock()
+	defer dm.configLock.RUnlock()
+	hostsDir := dm.HostsDir()
+	items, err := ioutil.ReadDir(hostsDir)
+	if err != nil {
+		return nil, fmt.Errorf("read dir of hosts: %w", err)
+	}
+	var ans = make([]string, 0, len(items))
+
+	for _, item := range items {
+		name := item.Name()
+		if item.IsDir() || types.CleanString(name) != name {
+			continue
+		}
+		ans = append(ans, name)
+	}
+	return ans, nil
+}
+
+// Hosts name and content based on hosts dir scanning. Go-routine safe.
+func (dm *Config) Hosts() (map[string][]byte, error) {
+	dm.configLock.RLock()
+	defer dm.configLock.RUnlock()
+	hostsDir := dm.HostsDir()
+	items, err := ioutil.ReadDir(hostsDir)
+	if err != nil {
+		return nil, fmt.Errorf("read dir of hosts: %w", err)
+	}
+	var ans = make(map[string][]byte, len(items))
+
+	for _, item := range items {
+		name := item.Name()
+		if item.IsDir() || types.CleanString(name) != name {
+			continue
+		}
+
+		data, err := ioutil.ReadFile(filepath.Join(hostsDir, name))
+		if err != nil {
+			return nil, err
+		}
+		ans[name] = data
+	}
+	return ans, nil
+}
+
+// AddHost saves content to hosts directory and adds ConnectTo directive. Go-routing safe.
+func (dm *Config) AddHost(name string, content []byte) error {
+	dm.configLock.Lock()
+	defer dm.configLock.Unlock()
+	if name != types.CleanString(name) {
+		return fmt.Errorf("malformed host name %s", name)
+	}
+	filename := filepath.Join(dm.HostsDir(), name)
+	err := ioutil.WriteFile(filename, content, 0755)
+	if err != nil {
+		return fmt.Errorf("save host file: %w", err)
+	}
+	main, err := dm.Main()
+	if err != nil {
+		return fmt.Errorf("read main config: %w", err)
+	}
+
+	for _, connectTo := range main.ConnectTo {
+		if name == connectTo {
+			return nil // already exists
+		}
+	}
+	main.ConnectTo = append(main.ConnectTo, name)
+
+	err = config.SaveFile(filepath.Join(dm.ConfigDir, "tinc.conf"), &main)
+	if err != nil {
+		return fmt.Errorf("save main config; %w", err)
+	}
+	return nil
+}
+
+// Host content. Go-routing safe.
+func (dm *Config) Host(name string) ([]byte, error) {
+	dm.configLock.RLock()
+	defer dm.configLock.RUnlock()
+	if name != types.CleanString(name) {
+		return nil, fmt.Errorf("malformed host name %s", name)
+	}
+	return ioutil.ReadFile(filepath.Join(dm.HostsDir(), name))
+}
+
+// Index hosts and add them to ConnectTo. Not safe from multiple go-routines.
+func (dm *Config) IndexHosts() error {
+	names, err := dm.HostNames()
+	if err != nil {
+		return fmt.Errorf("read names: %w", err)
+	}
+	main, err := dm.Main()
+	if err != nil {
+		return fmt.Errorf("read main config: %w", err)
+	}
+
+	main.ConnectTo = names
+
+	err = config.SaveFile(filepath.Join(dm.ConfigDir, "tinc.conf"), &main)
+	if err != nil {
+		return fmt.Errorf("save main config; %w", err)
+	}
+	return nil
 }
 
 func (dm *Config) args(extra ...string) []string {

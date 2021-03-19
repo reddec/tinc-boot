@@ -1,10 +1,8 @@
 package discovery
 
 import (
-	"io"
+	"log"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -18,7 +16,7 @@ func NewServer(ssd *SSD, config *daemon.Config) http.Handler {
 		ssd:    ssd,
 	}
 	mux := http.NewServeMux()
-	mux.HandleFunc("/", srv.getHeaders)                                            // -> [{"Name": "", "Version": 1234}, ...]
+	mux.HandleFunc("/hosts", srv.getHeaders)                                       // -> [{"Name": "", "Version": 1234}, ...]
 	mux.Handle("/host/", http.StripPrefix("/host/", http.HandlerFunc(srv.getOne))) // /host/abc?after=1234
 
 	return mux
@@ -46,21 +44,23 @@ func (srv *server) getOne(writer http.ResponseWriter, request *http.Request) {
 		version = v
 	}
 
+	log.Println("asking for", name, "after", version)
+
 	info, ok := srv.ssd.GetIfNewer(name, version)
 	if !ok {
 		http.NotFound(writer, request)
 		return
 	}
 
-	source, err := os.Open(filepath.Join(srv.config.HostsDir(), name))
+	content, err := srv.config.Host(name)
 	if err != nil {
 		http.Error(writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	defer source.Close()
 
 	writer.Header().Set("X-Name", info.Name)
 	writer.Header().Set("X-Version", strconv.FormatInt(info.Version, 10))
+	writer.Header().Set("Content-Length", strconv.Itoa(len(content)))
 	writer.WriteHeader(http.StatusOK)
-	_, _ = io.Copy(writer, source)
+	_, _ = writer.Write(content)
 }
