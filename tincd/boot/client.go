@@ -24,6 +24,7 @@ func NewClient(url string, config *daemon.Config, token Token) *Client {
 
 type Client struct {
 	Exchanged func(name string)
+	Complete  func()
 	token     Token
 	url       string
 	config    *daemon.Config
@@ -37,6 +38,9 @@ func (cl *Client) Run(ctx context.Context, retry time.Duration) {
 			log.Println("failed join:", err)
 		} else {
 			log.Println("join complete")
+			if callback := cl.Complete; callback != nil {
+				callback()
+			}
 			return
 		}
 		select {

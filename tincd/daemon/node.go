@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/reddec/tinc-boot/tincd/config"
@@ -91,15 +92,16 @@ func (dm *Config) Spawn(ctx context.Context) (*Daemon, error) {
 
 	child, cancel := context.WithCancel(ctx)
 	d := &Daemon{
-		name:       main.Name,
-		main:       main,
-		self:       node,
-		config:     dm,
-		cancel:     cancel,
-		done:       make(chan struct{}),
-		status:     StatusInit,
-		ip:         ip,
-		deviceName: main.Interface,
+		name:         main.Name,
+		main:         main,
+		self:         node,
+		config:       dm,
+		cancel:       cancel,
+		done:         make(chan struct{}),
+		reloadSignal: make(chan struct{}, 1),
+		status:       StatusInit,
+		ip:           ip,
+		deviceName:   main.Interface,
 	}
 	d.events.SubnetAdded.handlers = append(d.events.SubnetAdded.handlers, dm.events.SubnetAdded.handlers...)
 	d.events.SubnetRemoved.handlers = append(d.events.SubnetRemoved.handlers, dm.events.SubnetRemoved.handlers...)
@@ -244,16 +246,17 @@ const (
 // It's impossible to restart same daemon again. To recreate daemon with exactly same parameters use:
 // daemon.Config().Spawn(ctx, daemon.Name()).
 type Daemon struct {
-	name       string
-	config     *Config
-	self       *config.Node
-	main       *config.Main
-	ip         string
-	deviceName string
-	cancel     func()
-	status     Status
-	done       chan struct{}
-	events     Events
+	name         string
+	config       *Config
+	self         *config.Node
+	main         *config.Main
+	ip           string
+	deviceName   string
+	cancel       func()
+	status       Status
+	done         chan struct{}
+	events       Events
+	reloadSignal chan struct{}
 }
 
 // Events from daemon.
@@ -290,6 +293,15 @@ func (dm *Daemon) Main() config.Main {
 // Name of daemon same as provided during creation.
 func (dm *Daemon) Name() string {
 	return dm.name
+}
+
+// Reload hosts.
+func (dm *Daemon) Reload() {
+	select {
+	case dm.reloadSignal <- struct{}{}:
+	default:
+
+	}
 }
 
 func (dm *Daemon) setStatus(status Status) {
@@ -340,7 +352,33 @@ func (dm *Daemon) run(ctx context.Context) error {
 		Main:      *dm.main,
 	})
 
-	if err := cmd.Run(); err != nil {
+	err := cmd.Start()
+	if err != nil {
+		return fmt.Errorf("start: %w", err)
+	}
+
+	done := make(chan struct{})
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+
+		for {
+			select {
+			case <-done:
+				return
+			case <-dm.reloadSignal:
+				err := cmd.Process.Signal(syscall.Signal(1)) // Sig hup
+				if err != nil {
+					log.Println("failed reload hosts:", err)
+				} else {
+					log.Println("hosts reloaded")
+				}
+			}
+		}
+	}()
+
+	defer close(done)
+	if err := cmd.Wait(); err != nil {
 		return fmt.Errorf("run service: %w", err)
 	}
 
@@ -349,12 +387,25 @@ func (dm *Daemon) run(ctx context.Context) error {
 
 func (dm *Daemon) scanner(stream io.Reader) {
 	reader := bufio.NewScanner(stream)
+	routes := make(map[string]bool)
 	for reader.Scan() {
 		line := reader.Text()
 		if event := IsSubnetAdded(line); event != nil {
-			dm.events.SubnetAdded.emit(*event)
+			if !routes[event.Peer.Subnet] {
+				if err := setRouting(dm.deviceName, event.Peer.Subnet); err != nil {
+					log.Println("failed setup route to", event.Peer.Node, ":", err)
+				}
+				dm.events.SubnetAdded.emit(*event)
+				routes[event.Peer.Subnet] = true
+			}
 		} else if event := IsSubnetRemoved(line); event != nil {
-			dm.events.SubnetRemoved.emit(*event)
+			if routes[event.Peer.Subnet] {
+				if err := removeRouting(dm.deviceName, event.Peer.Subnet); err != nil {
+					log.Println("failed remove route to", event.Peer.Node, ":", err)
+				}
+				dm.events.SubnetRemoved.emit(*event)
+				delete(routes, event.Peer.Subnet)
+			}
 		} else if event := IsReady(line); event != nil {
 			dm.events.Ready.emit()
 			if err := dm.setupNetwork(); err != nil {
@@ -384,6 +435,32 @@ func (dm *Daemon) setupNetwork() error {
 	}
 	return nil
 }
+
+//
+//func (dm *Daemon) reloadRoutes() error {
+//	hosts, err := dm.config.Hosts()
+//	if err != nil {
+//		return fmt.Errorf("read hosts: %w", err)
+//	}
+//	if dm.routes == nil {
+//		dm.routes = make(map[string]bool)
+//	}
+//	for hostName, info := range hosts {
+//		var node config.Node
+//		if err := config.Unmarshal(info, &node); err != nil {
+//			return fmt.Errorf("parse node %s config: %w", hostName, err)
+//		}
+//		ip := strings.TrimSpace(strings.Split(node.Subnet, "/")[0])
+//		if dm.routes[ip] {
+//			continue
+//		}
+//		if err := setRouting(dm.deviceName, ip); err != nil {
+//			return fmt.Errorf("setup routing for host %s: %w", hostName, err)
+//		}
+//		dm.routes[ip] = true
+//	}
+//	return nil
+//}
 
 // event:"Configured"
 // event:"Stopped"

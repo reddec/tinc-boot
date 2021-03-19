@@ -208,10 +208,8 @@ func (cmd *Cmd) Execute([]string) error {
 	defer instance.Stop()
 
 	// setup boot/greeting service
-	var generatedToken bool
 	if cmd.Token == "" {
 		cmd.Token = utils.RandStringRunes(64)
-		generatedToken = true
 	}
 	var proto = "http"
 	if cmd.TLS {
@@ -222,12 +220,8 @@ func (cmd *Cmd) Execute([]string) error {
 		"Use one of this commands to join the network",
 		"",
 	}
-	visibleToken := cmd.Token
-	if !generatedToken {
-		visibleToken = "<TOKEN>"
-	}
 	for _, address := range cmd.advertise() {
-		lines = append(lines, os.Args[0]+" run -t "+visibleToken+" --join "+proto+"://"+address+":"+port)
+		lines = append(lines, os.Args[0]+" run -t "+cmd.Token+" --join "+proto+"://"+address+":"+port)
 	}
 	fmt.Println(strings.Join(lines, "\n"))
 
@@ -246,6 +240,9 @@ func (cmd *Cmd) Execute([]string) error {
 				log.Println("failed save discovery metadata after exchange:", err)
 			}
 		}
+		client.Complete = func() {
+			instance.Reload()
+		}
 		greetClients.Add(1)
 		go func(client *boot.Client) {
 			defer greetClients.Done()
@@ -257,10 +254,12 @@ func (cmd *Cmd) Execute([]string) error {
 	greetHandler := boot.NewServer(daemonConfig, token)
 	greetHandler.Joined = func(info boot.Envelope) {
 		// refresh discovery
-		ssd.ReplaceIfNewer(discovery.Entity{
+		if ssd.ReplaceIfNewer(discovery.Entity{
 			Name:    info.Name,
 			Version: 0,
-		}, nil)
+		}, nil) {
+			instance.Reload()
+		}
 		if err := ssd.Save(); err != nil {
 			log.Println("failed save discovery metadata:", err)
 		}

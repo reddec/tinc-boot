@@ -7,7 +7,33 @@
 
 Idea to create a easy-to-use wrapper over [tinc vpn](https://www.tinc-vpn.org).
 
+## Quick start (linux only)
+
 [skip to installation](#installation)
+
+### Automatic
+
+**node 1**
+
+    tinc-boot run
+
+
+**node 2**
+    
+follow command from previous operation
+
+### Custom token
+
+**node 1**
+
+    tinc-boot -t MYSECRET run 
+
+**node 2**
+
+    tinc-boot run -t MYSECRET --join http://<node1>:8665
+
+
+## Overview
 
 Tinc VPN - is full-mesh, auto-healing, time-proofed VPN system without single point of failure, with high-throughput and
 serious cryptography. 
