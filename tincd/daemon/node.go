@@ -64,6 +64,13 @@ func (dm *Config) Configured() bool {
 	return true
 }
 
+// Main config of self node.
+func (dm *Config) Main() (config.Main, error) {
+	var main config.Main
+	err := config.ReadFile(filepath.Join(dm.ConfigDir, "tinc.conf"), &main)
+	return main, err
+}
+
 // Create new named daemon but not start. Name just for logs.
 // To prevent go-routing leaks caller must call Stop() to cleanup resources.
 func (dm *Config) Spawn(ctx context.Context) (*Daemon, error) {

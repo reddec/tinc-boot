@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/reddec/tinc-boot/tincd/boot"
@@ -28,14 +29,17 @@ type Cmd struct {
 	Advertise         []string      `short:"a" long:"advertise" env:"ADVERTISE" description:"Routable IPs/domains with or without port that will be advertised for new clients. If not set - all non-loopback IPs will be used"`
 	TincPort          uint16        `long:"tinc-port" env:"TINC_PORT" description:"Tinc listen port for fresh node. If not set - random will be generated in 30000-40000 range"`
 	Device            string        `long:"device" env:"DEVICE" description:"Device name. If not defined - will use last 5 symbols of resolved name"`
-	Bind              string        `short:"b" long:"bind" env:"BIND" description:"Greeting protocol HTTP binding" default:":8655"`
-	Token             string        `long:"token" env:"TOKEN" description:"Boot token. If not defined - random string will be generated and printed"`
+	Port              uint16        `short:"p" long:"port" env:"PORT" description:"Greeting service binding port" default:"8655"`
+	Host              string        `short:"h" long:"host" env:"HOST" description:"Greeting service binding host" default:""`
+	Token             string        `short:"t" long:"token" env:"TOKEN" description:"Boot token. If not defined - random string will be generated and printed"`
 	TLS               bool          `long:"tls" env:"TLS" description:"Enable TLS for greeting protocol"`
 	Cert              string        `long:"cert" env:"CERT" description:"TLS certificate" default:"server.crt"`
 	Key               string        `long:"key" env:"KEY" description:"TLS key" default:"server.key"`
 	IP                string        `long:"ip" env:"IP" description:"VPN IP for fresh node. If not set - random will be generated once in 172.0.0.0/8"`
 	Dir               string        `short:"d" long:"dir" env:"DIR" description:"tinc-boot directory. Will be created if not exists" default:"vpn"`
 	Tincd             string        `long:"tincd" env:"TINCD" description:"tincd binary location" default:"tincd"`
+	Join              []string      `short:"j" long:"join" env:"JOIN" description:"URLs to join to another network"`
+	JoinRetry         time.Duration `long:"join-retry" env:"JOIN_RETRY" description:"Retry interval" default:"15s"`
 	DiscoveryInterval time.Duration `long:"discovery-interval" env:"DISCOVERY_INTERVAL" description:"Interval between discovery" default:"5s"`
 }
 
@@ -209,16 +213,39 @@ func (cmd *Cmd) Execute([]string) error {
 		if cmd.TLS {
 			proto = "https"
 		}
-		_, port, _ := net.SplitHostPort(cmd.Bind) // TODO: replace to listener Listen and get real port
-		fmt.Println("Use on of this command to join the network")
+		port := fmt.Sprint(cmd.Port) // TODO: replace to listener Listen and get real port
+		var lines = []string{
+			"Use one of this commands to join the network",
+			"",
+		}
+		fmt.Println("Use one of this command to join the network")
 		fmt.Println()
 		for _, address := range cmd.advertise() {
-			fmt.Println(os.Args[0], "run -t", cmd.Token, "--join", proto+"://"+address+":"+port)
+			lines = append(lines, os.Args[0]+" run -t "+cmd.Token+" --join "+proto+"://"+address+":"+port)
 		}
-		fmt.Println()
+		fmt.Println(strings.Join(lines, "\n"))
 	}
 	token := boot.Token(cmd.Token)
+	// setup greeting clients
+	var greetClients sync.WaitGroup
+	for _, url := range cmd.Join {
+		client := boot.NewClient(url, daemonConfig, token)
+		client.Exchanged = func(name string) {
+			if ssd.ReplaceIfNewer(discovery.Entity{
+				Name: name,
+			}, nil) {
+				log.Println("got new node", name, "from", url)
+			}
+			_ = ssd.Save()
+		}
+		greetClients.Add(1)
+		go func(client *boot.Client) {
+			defer greetClients.Done()
+			client.Run(ctx, cmd.JoinRetry)
+		}(client)
+	}
 
+	// setup own greeting service
 	greetHandler := boot.NewServer(daemonConfig, token)
 	greetHandler.Joined = func(info boot.Envelope) {
 		// refresh discovery
@@ -230,7 +257,7 @@ func (cmd *Cmd) Execute([]string) error {
 	}
 
 	greetServer := &http.Server{
-		Addr:    cmd.Bind,
+		Addr:    fmt.Sprint(cmd.Host, ":", cmd.Port),
 		Handler: greetHandler,
 	}
 
@@ -250,7 +277,7 @@ func (cmd *Cmd) Execute([]string) error {
 
 	cancel()
 	<-instance.Done()
-
+	greetClients.Wait()
 	return nil
 }
 

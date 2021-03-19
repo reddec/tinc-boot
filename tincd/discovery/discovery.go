@@ -47,8 +47,10 @@ func (ds *Discovery) Configured(payload daemon.Configuration) {
 }
 
 func (ds *Discovery) Stopped(payload daemon.Configuration) {
-	_ = ds.httpServer.server.Close()
-	<-ds.httpServer.done
+	if ds.httpServer.server != nil {
+		_ = ds.httpServer.server.Close()
+		<-ds.httpServer.done
+	}
 }
 
 func (ds *Discovery) SubnetAdded(payload daemon.EventSubnetAdded) {
