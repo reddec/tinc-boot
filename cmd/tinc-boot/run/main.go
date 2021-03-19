@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"strconv"
@@ -41,6 +42,7 @@ type Cmd struct {
 	Join              []string      `short:"j" long:"join" env:"JOIN" description:"URLs to join to another network"`
 	JoinRetry         time.Duration `long:"join-retry" env:"JOIN_RETRY" description:"Retry interval" default:"15s"`
 	DiscoveryInterval time.Duration `long:"discovery-interval" env:"DISCOVERY_INTERVAL" description:"Interval between discovery" default:"5s"`
+	UFW               bool          `long:"ufw" env:"UFW" description:"Open ports using ufw" `
 }
 
 func (cmd Cmd) configDir() string {
@@ -163,6 +165,10 @@ func (cmd *Cmd) Execute([]string) error {
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Kill, os.Interrupt)
 	defer cancel()
+
+	if cmd.UFW {
+		cmd.automaticFirewall(ctx, daemonConfig)
+	}
 
 	// configure daemon if needed
 	if !daemonConfig.Configured() {
@@ -335,6 +341,26 @@ func (cmd Cmd) nextTick() (int64, error) {
 
 	tick++
 	return tick, ioutil.WriteFile(cmd.clockFile(), []byte(strconv.FormatInt(tick, 10)), 0755)
+}
+
+func (cmd Cmd) automaticFirewall(ctx context.Context, dc *daemon.Config) {
+	dc.Events().Configured.Subscribe(func(configuration daemon.Configuration) {
+		if err := exec.CommandContext(ctx, "ufw", "allow", fmt.Sprint(configuration.Main.Port)).Run(); err != nil {
+			log.Println("failed allow incoming requests for traffic:", err)
+		} else {
+			log.Println("opened incoming port", fmt.Sprint(configuration.Main.Port))
+		}
+		if err := exec.CommandContext(ctx, "ufw", "allow", "from", "any", "to", "any", "port", fmt.Sprint(cmd.Port), "proto", "tcp").Run(); err != nil {
+			log.Println("failed allow incoming requests on boot port:", err)
+		} else {
+			log.Println("opened boot port", fmt.Sprint(cmd.Port))
+		}
+		if err := exec.CommandContext(ctx, "ufw", "allow", "in", "on", configuration.Interface, "to", "any", "port", discovery.Port, "proto", "tcp").Run(); err != nil {
+			log.Println("failed allow internal ports for discovery:", err)
+		} else {
+			log.Println("opened discovery port", discovery.Port, "on", configuration.Interface)
+		}
+	})
 }
 
 func getAllRoutableIPs() ([]string, error) {

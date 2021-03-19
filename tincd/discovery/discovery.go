@@ -11,7 +11,7 @@ import (
 	"github.com/reddec/tinc-boot/tincd/daemon"
 )
 
-const discoveryPort = "18655"
+const Port = "18655"
 
 func New(ssd *SSD, config *daemon.Config, interval time.Duration) *Discovery {
 	return &Discovery{
@@ -31,7 +31,7 @@ type Discovery struct {
 
 func (ds *Discovery) Configured(payload daemon.Configuration) {
 	ds.httpServer.server = &http.Server{
-		Addr:    fmt.Sprint(payload.IP, ":", discoveryPort),
+		Addr:    fmt.Sprint(payload.IP, ":", Port),
 		Handler: ds.serverHandler,
 	}
 	ds.httpServer.done = make(chan struct{})
@@ -54,14 +54,14 @@ func (ds *Discovery) Stopped(payload daemon.Configuration) {
 }
 
 func (ds *Discovery) SubnetAdded(payload daemon.EventSubnetAdded) {
-	if ds.client.Watch(context.Background(), strings.Split(payload.Peer.Subnet, "/")[0]+":"+discoveryPort) {
+	if ds.client.Watch(context.Background(), strings.Split(payload.Peer.Subnet, "/")[0]+":"+Port) {
 		log.Println("watching subnet", payload.Peer.Subnet)
 	}
 }
 
 func (ds *Discovery) SubnetRemoved(payload daemon.EventSubnetRemoved) {
 	log.Println("forgetting subnet", payload.Peer.Subnet)
-	ds.client.Forget(strings.Split(payload.Peer.Subnet, "/")[0] + ":" + discoveryPort)
+	ds.client.Forget(strings.Split(payload.Peer.Subnet, "/")[0] + ":" + Port)
 }
 
 func (ds *Discovery) Ready(payload daemon.EventReady) {

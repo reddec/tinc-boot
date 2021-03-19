@@ -17,9 +17,8 @@ Idea to create a easy-to-use wrapper over [tinc vpn](https://www.tinc-vpn.org).
 
     tinc-boot run
 
-
 **node 2**
-    
+
 follow command from previous operation
 
 ### Custom token
@@ -32,16 +31,26 @@ follow command from previous operation
 
     tinc-boot run -t MYSECRET --join http://<node1>:8665
 
+### Firewall
+
+> Use (--ufw) to open port on ufw-based systems automatically 
+> 
+>     tinc-boot run --ufw ...
+> 
+> Required opened default ports:
+>
+>  * `<port>/udp,<port>/tcp` - port defined as `--tinc-port` or generated in `tinc.conf`
+> * `8665/tcp` - port defined as `-p --port` for boot protocol
+> * `18655/tcp (tinc interface)` - internal port for communication. Only for interface defined in `tinc.conf`
 
 ## Overview
 
 Tinc VPN - is full-mesh, auto-healing, time-proofed VPN system without single point of failure, with high-throughput and
-serious cryptography. 
-All nodes in a Tinc network are fully equal. New nodes discovering full topology through any entry point. 
-Node may interact with each other even if they don't have direct connections.
+serious cryptography. All nodes in a Tinc network are fully equal. New nodes discovering full topology through any entry
+point. Node may interact with each other even if they don't have direct connections.
 
-Tinc is a great and have a lot of features. It's ideal for a complicated situations (China, Russia and others). 
-I really admire the project.
+Tinc is a great and have a lot of features. It's ideal for a complicated situations (China, Russia and others). I really
+admire the project.
 
 ![transit](https://user-images.githubusercontent.com/6597086/65304801-1b4ae480-dbb4-11e9-933f-b890242358ab.png)
 
@@ -49,11 +58,11 @@ I really admire the project.
 
 Pain to create a new node. Pain to add new node to network.
 
-Minimal configuration for a first public node: 
+Minimal configuration for a first public node:
 
-* 2 files (tinc.conf, hostfile), 
-* 1 script (tinc-up), 
-* 2 directories (net, hosts), 
+* 2 files (tinc.conf, hostfile),
+* 1 script (tinc-up),
+* 2 directories (net, hosts),
 * 1 command execution (key generation).
 
 (let's not count service initialization and other common stuff)
@@ -62,15 +71,16 @@ Second node adds key exchange (+1 operation if we will use `rsync`, or +2 operat
 
 ![second_node](https://user-images.githubusercontent.com/6597086/65304124-72e85080-dbb2-11e9-939f-6359095dbe54.png)
 
-Next new public nodes require increasing number of additional operations (+N operations, where N is a number of public nodes).
+Next new public nodes require increasing number of additional operations (+N operations, where N is a number of public
+nodes).
 
 ![third_node](https://user-images.githubusercontent.com/6597086/65304303-df634f80-dbb2-11e9-8b9a-32bd4c6b9c46.png)
 
 
-> To be honest, to just to connect to the network an only single key exchange operation required: with any public node. 
+> To be honest, to just to connect to the network an only single key exchange operation required: with any public node.
 > Than tincd will discover all other nodes.
 >
-> **But** after your node disconnect/reboot and in case of death of your entry node you will be no more able to connect 
+> **But** after your node disconnect/reboot and in case of death of your entry node you will be no more able to connect
 > to other alive nodes (because they don't know your key and your node don't know theirs).
 
 
@@ -90,18 +100,20 @@ Donating always welcome
 * ETH: `0xA4eD4fB5805a023816C9B55C52Ae056898b6BdBC`
 * BTC: `bc1qlj4v32rg8w0sgmtk8634uc36evj6jn3d5drnqy`
 
-
 ## Installation
 
 * (recommended) look at  [releases](https://github.com/reddec/tinc-boot/releases) page and download
 * one line shell command:
+
 ```
 curl -L https://github.com/reddec/tinc-boot/releases/latest/download/tinc-boot_linux_amd64.tar.gz | sudo tar -xz -C /usr/local/bin/ tinc-boot
 ```
+
 * build from source `go get -v github.com/reddec/tinc-boot/cmd/...`
 * [Ansible galaxy](https://galaxy.ansible.com/reddec/tinc_boot): `ansible-galaxy install reddec.tinc_boot`
 
 * From bintray repository for most **debian**-based distribution (`trusty`, `xenial`, `bionic`, `buster`, `wheezy`):
+
 ```bash
 sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 379CE192D401AB61
 echo "deb https://dl.bintray.com/reddec/debian {distribution} main" | sudo tee -a /etc/apt/sources.list
@@ -110,7 +122,8 @@ sudo apt install tinc-boot
 
 ### Independent maintainers
 
-* **Arch Linux** in AUR [package `tinc-boot-git`](https://aur.archlinux.org/packages/tinc-boot-git/): `yaourt -S tinc-boot-git`
+* **Arch Linux** in
+  AUR [package `tinc-boot-git`](https://aur.archlinux.org/packages/tinc-boot-git/): `yaourt -S tinc-boot-git`
 
 ### Support
 
@@ -139,8 +152,7 @@ sudo apt install tinc-boot
 * Archlinux (Q1 2019) x64
 * Manjaro (Q1 2019) x64
 
-Should work on all major linux systems, except generated helpers useful only for systemd-based OS. 
-
+Should work on all major linux systems, except generated helpers useful only for systemd-based OS.
 
 # Quick start
 
@@ -157,7 +169,7 @@ and follow recommendations
 ### Explanation
 
 * `--standalone` means that it's a first node, no need for keys exchange
-* `-a <address>` sets public address of node (if exists); could be used several times 
+* `-a <address>` sets public address of node (if exists); could be used several times
 
 Will generate all required files under `/etc/tinc/dnet`.
 
@@ -173,7 +185,7 @@ and follow recommendations
 
 * `--service` generates systemd file to `/etc/systemd/system/tinc-boot-{net}.service`
 * `--dir` location of tinc configuration
-* `--token` set's authorization token that will be used by clients 
+* `--token` set's authorization token that will be used by clients
 
 ## Create another node and join to net
 
@@ -204,10 +216,11 @@ Requirements:
 
 1. Tinc for Windows: [download on official site](https://www.tinc-vpn.org/)
 2. **Install TAP driver**!:
-  * Go to `C:\Program Files(x86)\tinc\tap-win64`
-  * As administrator run `addtap.bat`
-3. Rename generated network adapter to the name of the network (`dnet` by-default)
 
+* Go to `C:\Program Files(x86)\tinc\tap-win64`
+* As administrator run `addtap.bat`
+
+3. Rename generated network adapter to the name of the network (`dnet` by-default)
 
 Usage:
 

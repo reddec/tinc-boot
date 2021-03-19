@@ -436,32 +436,6 @@ func (dm *Daemon) setupNetwork() error {
 	return nil
 }
 
-//
-//func (dm *Daemon) reloadRoutes() error {
-//	hosts, err := dm.config.Hosts()
-//	if err != nil {
-//		return fmt.Errorf("read hosts: %w", err)
-//	}
-//	if dm.routes == nil {
-//		dm.routes = make(map[string]bool)
-//	}
-//	for hostName, info := range hosts {
-//		var node config.Node
-//		if err := config.Unmarshal(info, &node); err != nil {
-//			return fmt.Errorf("parse node %s config: %w", hostName, err)
-//		}
-//		ip := strings.TrimSpace(strings.Split(node.Subnet, "/")[0])
-//		if dm.routes[ip] {
-//			continue
-//		}
-//		if err := setRouting(dm.deviceName, ip); err != nil {
-//			return fmt.Errorf("setup routing for host %s: %w", hostName, err)
-//		}
-//		dm.routes[ip] = true
-//	}
-//	return nil
-//}
-
 // event:"Configured"
 // event:"Stopped"
 type Configuration struct {
