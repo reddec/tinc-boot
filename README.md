@@ -15,7 +15,7 @@ Idea to create a easy-to-use wrapper over [tinc vpn](https://www.tinc-vpn.org).
 
 **node 1**
 
-    tinc-boot run
+    sudo tinc-boot run
 
 **node 2**
 
@@ -25,11 +25,11 @@ follow command from previous operation
 
 **node 1**
 
-    tinc-boot -t MYSECRET run 
+    sudo tinc-boot -t MYSECRET run 
 
 **node 2**
 
-    tinc-boot run -t MYSECRET --join http://<node1>:8665
+    sudo tinc-boot run -t MYSECRET --join http://<node1>:8665
 
 ### Firewall
 
