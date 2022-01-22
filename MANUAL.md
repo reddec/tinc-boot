@@ -49,7 +49,7 @@ Generate new tinc node using bootnode or standalone.
 * `--name=`       - Self node name (trimmed hostname will be used if empty) [$NAME]
 * `--dir=`        - Configuration directory (default: /etc/tinc) [$DIR]
 * `-t, --token=`  - Authorization token (used as a encryption key) [$TOKEN]
-* `--prefix=`     - Address prefix (left segments will be randomly auto generated) (default: 172.173) [$PREFIX]
+* `--prefix=`     - Address prefix (left segments will be randomly auto generated) (default: 172.16.0.0/12) [$PREFIX]
 * `--mask=`       - Network mask (default: 16) [$MASK]
 * `--timeout=`    - Boot node request timeout (default: 15s) [$TIMEOUT]
 * `--bin=`        - tinc-boot location (default: /usr/local/bin/tinc-boot) [$BIN]

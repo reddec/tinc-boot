@@ -32,7 +32,7 @@ type Cmd struct {
 	Network    string        `long:"network" env:"NETWORK" description:"Network name" default:"dnet"`
 	Name       string        `long:"name" env:"NAME" description:"Self node name (trimmed hostname will be used if empty)"`
 	Token      string        `short:"t" long:"token" env:"TOKEN" description:"Authorization token (used as a encryption key)"`
-	Prefix     string        `long:"prefix" env:"PREFIX" description:"Address prefix (left segments will be randomly auto generated)" default:"172.173"`
+	Prefix     string        `long:"prefix" env:"PREFIX" description:"Address prefix (left segments will be randomly auto generated)" default:"172.16.0.0/12"`
 	Mask       int           `long:"mask" env:"MASK" description:"Network mask" default:"16"`
 	Timeout    time.Duration `long:"timeout" env:"TIMEOUT" description:"Boot node request timeout" default:"15s"`
 	NoBinCopy  bool          `long:"no-bin-copy" env:"NO_BIN_COPY" description:"Disable copy tinc-boot binary"`

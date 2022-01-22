@@ -22,7 +22,7 @@ const (
 	DefMask     = 16
 	DefNetwork  = "dnet"
 	DefPlatform = "amd64"
-	DefPrefix   = "172.173"
+	DefPrefix   = "172.16"
 	DefKeyBits  = 4096
 )
 
