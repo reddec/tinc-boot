@@ -36,7 +36,7 @@ type Cmd struct {
 	TLS               bool          `long:"tls" env:"TLS" description:"Enable TLS for greeting protocol"`
 	Cert              string        `long:"cert" env:"CERT" description:"TLS certificate" default:"server.crt"`
 	Key               string        `long:"key" env:"KEY" description:"TLS key" default:"server.key"`
-	IP                string        `long:"ip" env:"IP" description:"VPN IP for fresh node. If not set - random will be generated once in 172.0.0.0/8"`
+	IP                string        `long:"ip" env:"IP" description:"VPN IP for fresh node. If not set - random will be generated once in 172.16.0.0/12"`
 	Dir               string        `short:"d" long:"dir" env:"DIR" description:"tinc-boot directory. Will be created if not exists" default:"vpn"`
 	Tincd             string        `long:"tincd" env:"TINCD" description:"tincd binary location" default:"tincd"`
 	Join              []string      `short:"j" long:"join" env:"JOIN" description:"URLs to join to another network"`
@@ -123,7 +123,7 @@ func (cmd Cmd) ip() string {
 		return cmd.IP
 	}
 
-	return net.IPv4(172, byte(rand.Intn(255)), byte(rand.Intn(255)), 1+byte(rand.Intn(254))).String()
+	return net.IPv4(172, 16 + byte(rand.Intn(15)), byte(rand.Intn(255)), 1+byte(rand.Intn(254))).String()
 }
 
 func (cmd *Cmd) Execute([]string) error {
